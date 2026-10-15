@@ -202,11 +202,49 @@ function queueSave() {
   }, 420);
 }
 
+function countAdjacentCharacters(value, index, direction, character) {
+  let count = 0;
+  let cursor = direction < 0 ? index - 1 : index;
+
+  while (cursor >= 0 && cursor < value.length && value[cursor] === character) {
+    count += 1;
+    cursor += direction;
+  }
+
+  return count;
+}
+
 function insertMarkdown(before, after = "", placeholder = "文字") {
   const start = editor.selectionStart;
   const end = editor.selectionEnd;
   const hasSelection = end > start;
   const selected = hasSelection ? editor.value.slice(start, end) : placeholder;
+
+  if (hasSelection) {
+    const wrapperStart = start - before.length;
+    const wrapperEnd = end + after.length;
+    let hasMatchingWrapper =
+      wrapperStart >= 0 &&
+      editor.value.slice(wrapperStart, start) === before &&
+      editor.value.slice(end, wrapperEnd) === after;
+
+    if (before === "*" && after === "*") {
+      const leftStars = countAdjacentCharacters(editor.value, start, -1, "*");
+      const rightStars = countAdjacentCharacters(editor.value, end, 1, "*");
+      hasMatchingWrapper = leftStars % 2 === 1 && rightStars % 2 === 1;
+    }
+
+    if (hasMatchingWrapper) {
+      editor.setRangeText(selected, wrapperStart, wrapperEnd, "end");
+      editor.focus();
+      editor.setSelectionRange(wrapperStart, wrapperStart + selected.length);
+      render();
+      updateCursorPosition();
+      queueSave();
+      return;
+    }
+  }
+
   const replacement = `${before}${selected}${after}`;
   editor.setRangeText(replacement, start, end, "end");
   editor.focus();
