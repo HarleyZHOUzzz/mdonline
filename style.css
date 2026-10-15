@@ -542,6 +542,14 @@ button {
   text-decoration-color: var(--ink);
 }
 
+.preview-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.5em 0;
+  border: 1px solid var(--line);
+}
+
 .preview-content blockquote {
   padding: 0.2em 0 0.2em 1.2em;
   border-left: 3px solid var(--ink);

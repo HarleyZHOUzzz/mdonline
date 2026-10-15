@@ -90,6 +90,10 @@ $$
 \int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}
 $$
 
+## 示例图片
+
+![墨刻 Markdown 示例图片](https://avatars.githubusercontent.com/u/178354211?s=200&v=4)
+
 ---
 
 继续编辑左侧内容，试着加入一个 [链接](https://github.com)、表格或你自己的公式。
@@ -297,7 +301,11 @@ document.querySelector("#toolbar").addEventListener("click", (event) => {
     quote: () => insertLinePrefix("> ", "引用内容"),
     formula: () => insertMarkdown("$", "$", "E = mc^2"),
     image: () =>
-      insertMarkdown("![", "](https://avatars.githubusercontent.com/u/178354211?s=200&v=4)", "图片描述"),
+      insertMarkdown(
+        "![",
+        "](https://avatars.githubusercontent.com/u/178354211?s=200&v=4)",
+        "墨刻 Markdown 示例图片",
+      ),
   };
 
   actions[button.dataset.action]?.();
