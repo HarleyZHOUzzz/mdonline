@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="墨刻 Markdown：支持实时预览与 LaTeX 公式的在线写作工具。"
+    />
+    <meta name="theme-color" content="#f5f1e8" />
+    <title>墨刻 Markdown · 在线写作</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="墨刻 Markdown 首页">
+          <span class="brand-name">墨刻</span>
+          <span class="brand-divider" aria-hidden="true"></span>
+          <span class="brand-product">Markdown</span>
+        </a>
+
+        <nav class="view-switcher" aria-label="视图模式">
+          <button type="button" data-mode="edit" aria-pressed="false">
+            仅编辑
+          </button>
+          <button type="button" data-mode="split" aria-pressed="true">
+            分栏
+          </button>
+          <button type="button" data-mode="preview" aria-pressed="false">
+            仅预览
+          </button>
+        </nav>
+
+        <div class="topbar-actions">
+          <button class="new-document" id="new-document" type="button">
+            <i data-lucide="file-plus-2" aria-hidden="true"></i>
+            <span>新建文稿</span>
+          </button>
+          <button
+            class="icon-button"
+            id="theme-button"
+            type="button"
+            aria-label="切换到深色主题"
+            data-tooltip="切换主题"
+          >
+            <i data-lucide="moon" aria-hidden="true"></i>
+          </button>
+          <a
+            class="icon-button"
+            id="github-link"
+            href="https://github.com/"
+            target="_blank"
+            rel="noreferrer noopener"
+            aria-label="打开 GitHub 仓库"
+            data-tooltip="GitHub"
+          >
+            <i data-lucide="git-fork" aria-hidden="true"></i>
+          </a>
+          <div class="save-state" id="save-state" aria-live="polite">
+            <span class="save-dot" aria-hidden="true"></span>
+            <span>已自动保存</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="workspace" id="workspace" data-mode="split">
+        <section class="pane editor-pane" aria-label="Markdown 编辑区">
+          <div class="pane-header">
+            <div class="pane-title">
+              <i data-lucide="pencil-line" aria-hidden="true"></i>
+              <span>编辑器</span>
+            </div>
+            <div class="toolbar" id="toolbar" aria-label="Markdown 格式工具栏">
+              <button
+                type="button"
+                data-action="bold"
+                aria-label="粗体"
+                data-tooltip="粗体 ⌘B"
+              >
+                <i data-lucide="bold" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                data-action="italic"
+                aria-label="斜体"
+                data-tooltip="斜体 ⌘I"
+              >
+                <i data-lucide="italic" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                data-action="link"
+                aria-label="链接"
+                data-tooltip="链接 ⌘K"
+              >
+                <i data-lucide="link-2" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                data-action="code"
+                aria-label="行内代码"
+                data-tooltip="行内代码"
+              >
+                <i data-lucide="code-2" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                data-action="bullet"
+                aria-label="无序列表"
+                data-tooltip="无序列表"
+              >
+                <i data-lucide="list" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                data-action="ordered"
+                aria-label="有序列表"
+                data-tooltip="有序列表"
+              >
+                <i data-lucide="list-ordered" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                data-action="quote"
+                aria-label="引用"
+                data-tooltip="引用"
+              >
+                <i data-lucide="quote" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                data-action="formula"
+                aria-label="公式"
+                data-tooltip="LaTeX 公式"
+              >
+                <i data-lucide="sigma" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                data-action="image"
+                aria-label="图片"
+                data-tooltip="图片"
+              >
+                <i data-lucide="image" aria-hidden="true"></i>
+              </button>
+              <span class="toolbar-divider" aria-hidden="true"></span>
+              <div class="more-actions">
+                <button
+                  id="more-button"
+                  type="button"
+                  aria-label="更多操作"
+                  aria-expanded="false"
+                  aria-controls="more-menu"
+                  data-tooltip="更多"
+                >
+                  <i data-lucide="more-horizontal" aria-hidden="true"></i>
+                </button>
+                <div class="more-menu" id="more-menu" hidden>
+                  <button id="copy-markdown" type="button">
+                    <i data-lucide="copy" aria-hidden="true"></i>
+                    复制 Markdown
+                  </button>
+                  <button id="download-markdown" type="button">
+                    <i data-lucide="download" aria-hidden="true"></i>
+                    下载 .md
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <textarea
+            id="editor"
+            aria-label="Markdown 文本编辑器"
+            spellcheck="false"
+          ></textarea>
+          <footer class="pane-status">
+            <span id="cursor-position">Ln 1, Col 1</span>
+            <span class="status-spacer"></span>
+            <span>空格：2</span>
+            <span class="status-separator" aria-hidden="true">·</span>
+            <span>UTF-8</span>
+            <span class="status-separator" aria-hidden="true">·</span>
+            <span>Markdown</span>
+          </footer>
+        </section>
+
+        <div
+          class="resizer"
+          id="resizer"
+          role="separator"
+          aria-label="拖动调整编辑区和预览区宽度"
+          aria-orientation="vertical"
+        >
+          <span aria-hidden="true"></span>
+        </div>
+
+        <section class="pane preview-pane" aria-label="Markdown 预览区">
+          <div class="pane-header preview-header">
+            <div class="pane-title">
+              <i data-lucide="eye" aria-hidden="true"></i>
+              <span>预览</span>
+            </div>
+            <span class="live-label"
+              ><span aria-hidden="true"></span>实时渲染</span
+            >
+          </div>
+          <article class="preview-content" id="preview"></article>
+          <footer class="pane-status preview-status">
+            <span id="word-count">0 字</span>
+            <span class="status-separator" aria-hidden="true">·</span>
+            <span id="read-time">约 1 分钟阅读</span>
+          </footer>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/index.js"></script>
+  </body>
+</html>
