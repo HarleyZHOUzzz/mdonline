@@ -297,7 +297,7 @@ document.querySelector("#toolbar").addEventListener("click", (event) => {
     quote: () => insertLinePrefix("> ", "引用内容"),
     formula: () => insertMarkdown("$", "$", "E = mc^2"),
     image: () =>
-      insertMarkdown("![", "](https://example.com/image.jpg)", "图片描述"),
+      insertMarkdown("![", "](https://avatars.githubusercontent.com/u/178354211?s=200&v=4)", "图片描述"),
   };
 
   actions[button.dataset.action]?.();
