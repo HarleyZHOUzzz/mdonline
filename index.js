@@ -205,14 +205,22 @@ function queueSave() {
 function insertMarkdown(before, after = "", placeholder = "文字") {
   const start = editor.selectionStart;
   const end = editor.selectionEnd;
-  const selected = editor.value.slice(start, end) || placeholder;
+  const hasSelection = end > start;
+  const selected = hasSelection ? editor.value.slice(start, end) : placeholder;
   const replacement = `${before}${selected}${after}`;
   editor.setRangeText(replacement, start, end, "end");
   editor.focus();
-  editor.setSelectionRange(
-    start + before.length,
-    start + before.length + selected.length,
-  );
+
+  if (hasSelection) {
+    editor.setSelectionRange(
+      start + before.length,
+      start + before.length + selected.length,
+    );
+  } else {
+    const insertionEnd = start + replacement.length;
+    editor.setSelectionRange(insertionEnd, insertionEnd);
+  }
+
   render();
   updateCursorPosition();
   queueSave();
