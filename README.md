@@ -306,7 +306,7 @@ markdownonline/
         ├── 更新行号、光标位置和字数
         └── markdown-it 解析
                 │
-                ├── markdown-it-katex 渲染公式
+                ├── @mdit/plugin-katex 渲染公式
                 ├── markdown-it-task-lists 渲染任务列表
                 └── highlight.js 高亮代码块
                         │

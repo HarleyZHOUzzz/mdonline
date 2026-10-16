@@ -16,6 +16,7 @@ import sql from "highlight.js/lib/languages/sql";
 import typescript from "highlight.js/lib/languages/typescript";
 import xml from "highlight.js/lib/languages/xml";
 import yaml from "highlight.js/lib/languages/yaml";
+import { katex as markdownItKatex } from "@mdit/plugin-katex";
 import {
   Bold,
   Code2,
@@ -38,7 +39,6 @@ import {
   Sun,
 } from "lucide";
 import MarkdownIt from "markdown-it";
-import markdownItKatex from "markdown-it-katex";
 import markdownItTaskLists from "markdown-it-task-lists";
 
 import "highlight.js/styles/github-dark.css";
