@@ -171,11 +171,18 @@
               </div>
             </div>
           </div>
-          <textarea
-            id="editor"
-            aria-label="Markdown 文本编辑器"
-            spellcheck="false"
-          ></textarea>
+          <div class="editor-body">
+            <div
+              class="line-numbers"
+              id="line-numbers"
+              aria-hidden="true"
+            ></div>
+            <textarea
+              id="editor"
+              aria-label="Markdown 文本编辑器"
+              spellcheck="false"
+            ></textarea>
+          </div>
           <footer class="pane-status">
             <span id="cursor-position">Ln 1, Col 1</span>
             <span class="status-spacer"></span>

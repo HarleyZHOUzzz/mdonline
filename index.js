@@ -153,6 +153,7 @@ const storageKeys = {
 };
 
 const editor = document.querySelector("#editor");
+const lineNumbers = document.querySelector("#line-numbers");
 const preview = document.querySelector("#preview");
 const workspace = document.querySelector("#workspace");
 const saveState = document.querySelector("#save-state");
@@ -172,6 +173,7 @@ let saveTimer;
 let toastTimer;
 let dragging = false;
 let syncingScroll = false;
+let renderedLineCount = 0;
 
 const md = new MarkdownIt({
   breaks: true,
@@ -224,6 +226,24 @@ function render() {
   const value = editor.value;
   preview.innerHTML = md.render(value);
   updateDocumentStats(value);
+  updateLineNumbers();
+}
+
+function updateLineNumbers() {
+  const lineCount = editor.value.split("\n").length;
+  if (lineCount === renderedLineCount) return;
+
+  const fragment = document.createDocumentFragment();
+
+  for (let index = 1; index <= lineCount; index += 1) {
+    const lineNumber = document.createElement("span");
+    lineNumber.textContent = String(index);
+    fragment.append(lineNumber);
+  }
+
+  lineNumbers.replaceChildren(fragment);
+  lineNumbers.scrollTop = editor.scrollTop;
+  renderedLineCount = lineCount;
 }
 
 function updateDocumentStats(value) {
@@ -443,6 +463,7 @@ editor.addEventListener("keydown", (event) => {
 });
 
 editor.addEventListener("scroll", () => {
+  lineNumbers.scrollTop = editor.scrollTop;
   if (syncingScroll || workspace.dataset.mode !== "split") return;
   syncingScroll = true;
   const editorRange = editor.scrollHeight - editor.clientHeight;
