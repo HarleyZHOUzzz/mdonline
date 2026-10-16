@@ -135,6 +135,31 @@ button {
   text-decoration: none;
 }
 
+.brand-logo {
+  position: relative;
+  flex: 0 0 auto;
+  width: 88px;
+  height: 40px;
+  margin-right: 12px;
+  overflow: hidden;
+}
+
+.brand-logo img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 108px;
+  max-width: none;
+  height: auto;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: multiply;
+}
+
+:root[data-theme="dark"] .brand-logo img {
+  filter: invert(1);
+  mix-blend-mode: screen;
+}
+
 .brand-name {
   font-family: Georgia, "Songti SC", "STSong", serif;
   font-size: 24px;
@@ -755,6 +780,16 @@ button {
 
   .brand-name {
     font-size: 21px;
+  }
+
+  .brand-logo {
+    width: 72px;
+    height: 34px;
+    margin-right: 8px;
+  }
+
+  .brand-logo img {
+    width: 90px;
   }
 
   .brand-divider,
