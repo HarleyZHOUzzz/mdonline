@@ -1,6 +1,21 @@
 import hljs from "highlight.js/lib/core";
+import bash from "highlight.js/lib/languages/bash";
+import c from "highlight.js/lib/languages/c";
+import cpp from "highlight.js/lib/languages/cpp";
+import csharp from "highlight.js/lib/languages/csharp";
+import css from "highlight.js/lib/languages/css";
+import go from "highlight.js/lib/languages/go";
+import java from "highlight.js/lib/languages/java";
 import javascript from "highlight.js/lib/languages/javascript";
+import json from "highlight.js/lib/languages/json";
+import markdown from "highlight.js/lib/languages/markdown";
+import php from "highlight.js/lib/languages/php";
+import python from "highlight.js/lib/languages/python";
+import rust from "highlight.js/lib/languages/rust";
+import sql from "highlight.js/lib/languages/sql";
 import typescript from "highlight.js/lib/languages/typescript";
+import xml from "highlight.js/lib/languages/xml";
+import yaml from "highlight.js/lib/languages/yaml";
 import {
   Bold,
   Code2,
@@ -26,12 +41,42 @@ import MarkdownIt from "markdown-it";
 import markdownItKatex from "markdown-it-katex";
 import markdownItTaskLists from "markdown-it-task-lists";
 
-import "highlight.js/styles/github.css";
+import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
 import "./style.css";
 
-hljs.registerLanguage("javascript", javascript);
-hljs.registerLanguage("typescript", typescript);
+const codeLanguages = {
+  bash,
+  c,
+  cpp,
+  csharp,
+  css,
+  go,
+  java,
+  javascript,
+  json,
+  markdown,
+  php,
+  python,
+  rust,
+  sql,
+  typescript,
+  xml,
+  yaml,
+};
+
+Object.entries(codeLanguages).forEach(([name, language]) => {
+  hljs.registerLanguage(name, language);
+});
+
+hljs.registerAliases(["sh", "shell", "zsh"], { languageName: "bash" });
+hljs.registerAliases(["cs"], { languageName: "csharp" });
+hljs.registerAliases(["html", "svg"], { languageName: "xml" });
+hljs.registerAliases(["js", "jsx"], { languageName: "javascript" });
+hljs.registerAliases(["md"], { languageName: "markdown" });
+hljs.registerAliases(["py"], { languageName: "python" });
+hljs.registerAliases(["ts", "tsx"], { languageName: "typescript" });
+hljs.registerAliases(["yml"], { languageName: "yaml" });
 
 const appIcons = {
   Bold,
@@ -134,16 +179,22 @@ const md = new MarkdownIt({
   linkify: true,
   typographer: true,
   highlight(code, language) {
-    if (language && hljs.getLanguage(language)) {
-      return `<pre class="hljs"><code>${
+    const normalizedLanguage = language
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_+-]/g, "");
+
+    if (normalizedLanguage && hljs.getLanguage(normalizedLanguage)) {
+      return `<pre class="hljs" data-language="${normalizedLanguage}"><code>${
         hljs.highlight(code, {
-          language,
+          language: normalizedLanguage,
           ignoreIllegals: true,
         }).value
       }</code></pre>`;
     }
 
-    return `<pre class="hljs"><code>${md.utils.escapeHtml(code)}</code></pre>`;
+    const languageLabel = normalizedLanguage || "text";
+    return `<pre class="hljs" data-language="${languageLabel}"><code>${md.utils.escapeHtml(code)}</code></pre>`;
   },
 })
   .use(markdownItKatex, {

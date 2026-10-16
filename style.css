@@ -587,6 +587,21 @@ button {
   tab-size: 2;
 }
 
+.preview-content pre[data-language]::before {
+  position: absolute;
+  top: 9px;
+  right: 12px;
+  color: #a7aaa3;
+  content: attr(data-language);
+  font-family: Inter, ui-sans-serif, sans-serif;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+  user-select: none;
+}
+
 .preview-content pre code {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
