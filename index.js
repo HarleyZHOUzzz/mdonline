@@ -290,30 +290,64 @@ function countAdjacentCharacters(value, index, direction, character) {
 }
 
 const inlineFormats = {
-  bold: { before: "**", after: "**", placeholder: "粗体文字" },
-  italic: { before: "*", after: "*", placeholder: "斜体文字" },
-  link: {
-    before: "[",
-    after: "](https://example.com)",
-    placeholder: "链接文字",
-  },
-  code: { before: "`", after: "`", placeholder: "code" },
-  formula: { before: "$", after: "$", placeholder: "E = mc^2" },
-  image: {
-    before: "![",
-    after: "](https://avatars.githubusercontent.com/u/178354211?s=200&v=4)",
-    placeholder: "墨刻 Markdown 示例图片",
-  },
+  bold: { placeholder: "粗体文字" },
+  italic: { placeholder: "斜体文字" },
+  link: { placeholder: "链接文字" },
+  code: { placeholder: "code" },
+  formula: { placeholder: "E = mc^2" },
+  image: { placeholder: "墨刻 Markdown 示例图片" },
 };
 
-const incompatibleInlineFormats = {
-  bold: new Set(["code", "formula", "image"]),
-  italic: new Set(["code", "formula", "image"]),
-  link: new Set(["code", "formula", "image"]),
-  code: new Set(["bold", "italic", "link", "formula", "image"]),
-  formula: new Set(["bold", "italic", "link", "code", "image"]),
-  image: new Set(["bold", "italic", "link", "code", "formula"]),
-};
+const composableInlineFormats = new Set(["bold", "italic", "link"]);
+const exclusiveInlineFormats = new Set(["code", "formula", "image"]);
+const defaultLinkDestination = "https://example.com";
+const defaultImageDestination =
+  "https://avatars.githubusercontent.com/u/178354211?s=200&v=4";
+
+function createInlineLayer(action, content, existingLayer) {
+  if (action === "bold") {
+    return { action, before: "**", after: "**" };
+  }
+
+  if (action === "italic") {
+    return { action, before: "*", after: "*" };
+  }
+
+  if (action === "link") {
+    return {
+      action,
+      before: "[",
+      after: existingLayer?.after || `](${defaultLinkDestination})`,
+    };
+  }
+
+  if (action === "formula") {
+    return { action, before: "$", after: "$" };
+  }
+
+  if (action === "image") {
+    return {
+      action,
+      before: "![",
+      after: existingLayer?.after || `](${defaultImageDestination})`,
+    };
+  }
+
+  const longestBacktickRun = Math.max(
+    0,
+    ...(content.match(/`+/g) || []).map((run) => run.length),
+  );
+  const delimiter = "`".repeat(longestBacktickRun + 1);
+  const needsPadding =
+    /\S/.test(content) && (/^[` ]/.test(content) || /[` ]$/.test(content));
+  const padding = needsPadding ? " " : "";
+
+  return {
+    action: "code",
+    before: `${delimiter}${padding}`,
+    after: `${padding}${delimiter}`,
+  };
+}
 
 function findLinkSuffix(value, end) {
   if (value.slice(end, end + 2) !== "](") return null;
@@ -332,37 +366,94 @@ function findLinkSuffix(value, end) {
 }
 
 function matchInlineLayer(value, start, end) {
-  const linkSuffix = findLinkSuffix(value, end);
+  let labelStart = start;
+  let labelEnd = end;
 
-  if (linkSuffix && value.slice(start - 2, start) === "![") {
+  while (labelStart > 0 && /[ \t]/.test(value[labelStart - 1])) {
+    labelStart -= 1;
+  }
+
+  while (labelEnd < value.length && /[ \t]/.test(value[labelEnd])) {
+    labelEnd += 1;
+  }
+
+  const linkSuffix = findLinkSuffix(value, labelEnd);
+
+  if (linkSuffix && value.slice(labelStart - 2, labelStart) === "![") {
     return {
-      beforeLength: 2,
-      afterLength: linkSuffix.length,
-      layers: [{ action: "image", before: "![", after: linkSuffix }],
+      beforeLength: start - labelStart + 2,
+      afterLength: labelEnd - end + linkSuffix.length,
+      layers: [
+        {
+          action: "image",
+          before: value.slice(labelStart - 2, start),
+          after: value.slice(end, labelEnd) + linkSuffix,
+        },
+      ],
     };
   }
 
-  if (linkSuffix && value[start - 1] === "[") {
+  if (linkSuffix && value[labelStart - 1] === "[") {
+    return {
+      beforeLength: start - labelStart + 1,
+      afterLength: labelEnd - end + linkSuffix.length,
+      layers: [
+        {
+          action: "link",
+          before: value.slice(labelStart - 1, start),
+          after: value.slice(end, labelEnd) + linkSuffix,
+        },
+      ],
+    };
+  }
+
+  const openingBackticks = countAdjacentCharacters(value, start, -1, "`");
+  const closingBackticks = countAdjacentCharacters(value, end, 1, "`");
+  const directBackticks =
+    openingBackticks === closingBackticks ? openingBackticks : 0;
+
+  if (directBackticks > 0) {
+    const delimiter = "`".repeat(directBackticks);
+    return {
+      beforeLength: directBackticks,
+      afterLength: directBackticks,
+      layers: [{ action: "code", before: delimiter, after: delimiter }],
+    };
+  }
+
+  const hasCodePadding = value[start - 1] === " " && value[end] === " ";
+  const openingPaddedBackticks = hasCodePadding
+    ? countAdjacentCharacters(value, start - 1, -1, "`")
+    : 0;
+  const closingPaddedBackticks = hasCodePadding
+    ? countAdjacentCharacters(value, end + 1, 1, "`")
+    : 0;
+  const paddedBackticks =
+    openingPaddedBackticks === closingPaddedBackticks
+      ? openingPaddedBackticks
+      : 0;
+
+  if (paddedBackticks > 0) {
+    const delimiter = "`".repeat(paddedBackticks);
+    return {
+      beforeLength: paddedBackticks + 1,
+      afterLength: paddedBackticks + 1,
+      layers: [
+        {
+          action: "code",
+          before: `${delimiter} `,
+          after: ` ${delimiter}`,
+        },
+      ],
+    };
+  }
+
+  if (value[start - 1] === "$" && value[end] === "$") {
     return {
       beforeLength: 1,
-      afterLength: linkSuffix.length,
-      layers: [{ action: "link", before: "[", after: linkSuffix }],
+      afterLength: 1,
+      layers: [{ action: "formula", before: "$", after: "$" }],
     };
-  }
-
-  const symmetricFormats = [
-    ["code", "`"],
-    ["formula", "$"],
-  ];
-
-  for (const [action, marker] of symmetricFormats) {
-    if (value[start - 1] === marker && value[end] === marker) {
-      return {
-        beforeLength: 1,
-        afterLength: 1,
-        layers: [{ action, before: marker, after: marker }],
-      };
-    }
   }
 
   const starCount = Math.min(
@@ -400,6 +491,137 @@ function matchInlineLayer(value, start, end) {
   return null;
 }
 
+function findClosingBracket(value, start) {
+  let depth = 1;
+
+  for (let index = start; index < value.length; index += 1) {
+    if (value[index] === "\\") {
+      index += 1;
+      continue;
+    }
+
+    if (value[index] === "[") depth += 1;
+    if (value[index] !== "]") continue;
+
+    depth -= 1;
+    if (depth === 0) return index;
+  }
+
+  return -1;
+}
+
+function matchContainedInlineLayer(value) {
+  const isImage = value.startsWith("![");
+  const isLink = !isImage && value.startsWith("[");
+
+  if (isImage || isLink) {
+    const contentStart = isImage ? 2 : 1;
+    const closingBracket = findClosingBracket(value, contentStart);
+    const suffix =
+      closingBracket >= 0 ? findLinkSuffix(value, closingBracket) : null;
+
+    if (suffix && closingBracket + suffix.length === value.length) {
+      return {
+        beforeLength: contentStart,
+        afterLength: suffix.length,
+        layers: [
+          {
+            action: isImage ? "image" : "link",
+            before: value.slice(0, contentStart),
+            after: suffix,
+          },
+        ],
+      };
+    }
+  }
+
+  const openingBackticks = value.match(/^`+/)?.[0] || "";
+  const closingBackticks = value.match(/`+$/)?.[0] || "";
+
+  if (
+    openingBackticks &&
+    openingBackticks.length === closingBackticks.length &&
+    value.length > openingBackticks.length + closingBackticks.length
+  ) {
+    const inner = value.slice(
+      openingBackticks.length,
+      value.length - closingBackticks.length,
+    );
+    const hasPadding =
+      inner.startsWith(" ") && inner.endsWith(" ") && /\S/.test(inner);
+    return {
+      beforeLength: openingBackticks.length + (hasPadding ? 1 : 0),
+      afterLength: closingBackticks.length + (hasPadding ? 1 : 0),
+      layers: [
+        {
+          action: "code",
+          before: openingBackticks + (hasPadding ? " " : ""),
+          after: (hasPadding ? " " : "") + closingBackticks,
+        },
+      ],
+    };
+  }
+
+  if (value.length > 2 && value.startsWith("$") && value.endsWith("$")) {
+    return {
+      beforeLength: 1,
+      afterLength: 1,
+      layers: [{ action: "formula", before: "$", after: "$" }],
+    };
+  }
+
+  const starCount = Math.min(
+    value.match(/^\*+/)?.[0].length || 0,
+    value.match(/\*+$/)?.[0].length || 0,
+  );
+
+  if (starCount >= 3) {
+    return {
+      beforeLength: 3,
+      afterLength: 3,
+      layers: [
+        { action: "bold", before: "**", after: "**" },
+        { action: "italic", before: "*", after: "*" },
+      ],
+    };
+  }
+
+  if (starCount === 2) {
+    return {
+      beforeLength: 2,
+      afterLength: 2,
+      layers: [{ action: "bold", before: "**", after: "**" }],
+    };
+  }
+
+  if (starCount === 1) {
+    return {
+      beforeLength: 1,
+      afterLength: 1,
+      layers: [{ action: "italic", before: "*", after: "*" }],
+    };
+  }
+
+  return null;
+}
+
+function collectContainedInlineLayers(value) {
+  const layers = [];
+  let content = value;
+  let match = matchContainedInlineLayer(content);
+
+  while (match) {
+    layers.push(...match.layers);
+    content = content.slice(
+      match.beforeLength,
+      content.length - match.afterLength,
+    );
+    match = matchContainedInlineLayer(content);
+  }
+
+  return { content, layers };
+}
+
 function collectInlineLayers(value, start, end) {
   const layers = [];
   let outerStart = start;
@@ -416,22 +638,68 @@ function collectInlineLayers(value, start, end) {
   return { layers, outerStart, outerEnd };
 }
 
+function containsInlineLink(value) {
+  const inlineToken = md.parseInline(value)[0];
+  return inlineToken?.children?.some((token) => token.type === "link_open");
+}
+
+function buildInlineReplacement(content, actions, existingLayers) {
+  const exclusiveAction = [...exclusiveInlineFormats].find((action) =>
+    actions.has(action),
+  );
+  const layers = [];
+
+  if (exclusiveAction) {
+    layers.push(
+      createInlineLayer(
+        exclusiveAction,
+        content,
+        existingLayers.get(exclusiveAction),
+      ),
+    );
+  } else {
+    for (const action of ["bold", "italic", "link"]) {
+      if (actions.has(action)) {
+        layers.push(
+          createInlineLayer(action, content, existingLayers.get(action)),
+        );
+      }
+    }
+  }
+
+  let replacement = content;
+
+  for (const layer of layers) {
+    replacement = `${layer.before}${replacement}${layer.after}`;
+  }
+
+  return {
+    replacement,
+    selectionOffset: layers.reduce(
+      (length, layer) => length + layer.before.length,
+      0,
+    ),
+  };
+}
+
 function toggleInlineFormat(action) {
   const format = inlineFormats[action];
   const start = editor.selectionStart;
   const end = editor.selectionEnd;
   const hasSelection = end > start;
-  const selected = hasSelection
-    ? editor.value.slice(start, end)
-    : format.placeholder;
 
   if (!hasSelection) {
-    const replacement = `${format.before}${selected}${format.after}`;
+    const selected = format.placeholder;
+    const { replacement, selectionOffset } = buildInlineReplacement(
+      selected,
+      new Set([action]),
+      new Map(),
+    );
     editor.setRangeText(replacement, start, end, "end");
     editor.focus();
     editor.setSelectionRange(
-      start + format.before.length,
-      start + format.before.length + selected.length,
+      start + selectionOffset,
+      start + selectionOffset + selected.length,
     );
     render();
     updateCursorPosition();
@@ -439,38 +707,71 @@ function toggleInlineFormat(action) {
     return;
   }
 
+  let contentStart = start;
+  let contentEnd = end;
+
+  if (composableInlineFormats.has(action)) {
+    while (contentStart < contentEnd && /\s/.test(editor.value[contentStart])) {
+      contentStart += 1;
+    }
+
+    while (
+      contentEnd > contentStart &&
+      /\s/.test(editor.value[contentEnd - 1])
+    ) {
+      contentEnd -= 1;
+    }
+  }
+
+  if (contentStart === contentEnd) return;
+
+  const selectedSource = editor.value.slice(contentStart, contentEnd);
+  const { content: selected, layers: containedLayers } =
+    collectContainedInlineLayers(selectedSource);
   const {
-    layers: collectedLayers,
+    layers: outerLayers,
     outerStart,
     outerEnd,
-  } = collectInlineLayers(editor.value, start, end);
-  const seenActions = new Set();
-  let layers = collectedLayers.filter((layer) => {
-    if (seenActions.has(layer.action)) return false;
-    seenActions.add(layer.action);
-    return true;
-  });
-  const isActive = seenActions.has(action);
+  } = collectInlineLayers(editor.value, contentStart, contentEnd);
+  const allLayers = [...containedLayers, ...outerLayers];
+  const existingLayers = new Map();
+
+  for (const layer of allLayers) {
+    if (!existingLayers.has(layer.action)) {
+      existingLayers.set(layer.action, layer);
+    }
+  }
+
+  const activeActions = new Set(existingLayers.keys());
+  const isActive = activeActions.has(action);
 
   if (isActive) {
-    layers = layers.filter((layer) => layer.action !== action);
+    activeActions.delete(action);
+  } else if (exclusiveInlineFormats.has(action)) {
+    activeActions.clear();
+    activeActions.add(action);
   } else {
-    const incompatible = incompatibleInlineFormats[action];
-    layers = layers.filter((layer) => !incompatible.has(layer.action));
-    layers.unshift({ action, before: format.before, after: format.after });
+    for (const exclusiveAction of exclusiveInlineFormats) {
+      activeActions.delete(exclusiveAction);
+    }
+
+    if (action === "link" && containsInlineLink(selected)) {
+      showToast("链接不能嵌套");
+      return;
+    }
+
+    activeActions.add(action);
   }
 
-  let replacement = selected;
-
-  for (const layer of layers) {
-    replacement = `${layer.before}${replacement}${layer.after}`;
-  }
+  const { replacement, selectionOffset } = buildInlineReplacement(
+    selected,
+    activeActions,
+    existingLayers,
+  );
 
   editor.setRangeText(replacement, outerStart, outerEnd, "end");
   editor.focus();
-  const selectionStart =
-    outerStart +
-    layers.reduce((length, layer) => length + layer.before.length, 0);
+  const selectionStart = outerStart + selectionOffset;
   editor.setSelectionRange(selectionStart, selectionStart + selected.length);
   render();
   updateCursorPosition();
@@ -503,13 +804,13 @@ function insertMarkdown(before, after = "", placeholder = "文字") {
 }
 
 function parseLinePrefixes(line) {
-  const indent = line.match(/^\s*/)?.[0] || "";
+  const indent = line.match(/^ {0,3}/)?.[0] || "";
   const layers = [];
   let content = line.slice(indent.length);
   let match;
 
   do {
-    match = content.match(/^(>\s?|[-*+]\s+|\d+\.\s+)/);
+    match = content.match(/^(>[ \t]?|[-*+][ \t]+|\d{1,9}[.)][ \t]+)/);
     if (!match) continue;
 
     const marker = match[0];
@@ -529,37 +830,58 @@ function toggleLinePrefix(action, placeholder = "列表项") {
   const start = editor.selectionStart;
   const end = editor.selectionEnd;
   const lineStart = editor.value.lastIndexOf("\n", start - 1) + 1;
-  const selection = editor.value.slice(lineStart, end) || placeholder;
+  const selectionEndsAtLineStart =
+    end > start && editor.value[end - 1] === "\n";
+  const lastSelectedCharacter = selectionEndsAtLineStart ? end - 1 : end;
+  const nextLineBreak = editor.value.indexOf("\n", lastSelectedCharacter);
+  const lineEnd = selectionEndsAtLineStart
+    ? lastSelectedCharacter
+    : nextLineBreak === -1
+      ? editor.value.length
+      : nextLineBreak;
+  const source = editor.value.slice(lineStart, lineEnd);
+  const selection = source || placeholder;
   const parsedLines = selection.split("\n").map(parseLinePrefixes);
-  const isActive = parsedLines.every(({ layers }) =>
-    layers.some((layer) => layer.action === action),
+  const nonemptyLines = parsedLines.filter(
+    ({ content, layers }) => content || layers.length,
   );
+  const isActive =
+    nonemptyLines.length > 0 &&
+    nonemptyLines.every(({ layers }) =>
+      layers.some((layer) => layer.action === action),
+    );
+  let orderedIndex = 1;
   const replacement = parsedLines
-    .map(({ indent, layers: collectedLayers, content }, index) => {
-      const seenActions = new Set();
-      let layers = collectedLayers.filter((layer) => {
-        if (seenActions.has(layer.action)) return false;
-        seenActions.add(layer.action);
-        return true;
-      });
+    .map(({ indent, layers: collectedLayers, content }) => {
+      const activeActions = new Set(
+        collectedLayers.map((layer) => layer.action),
+      );
 
       if (isActive) {
-        layers = layers.filter((layer) => layer.action !== action);
-      } else if (!seenActions.has(action)) {
-        const marker =
-          action === "ordered"
-            ? `${index + 1}. `
-            : action === "quote"
-              ? "> "
-              : "- ";
-        layers.unshift({ action, marker });
+        activeActions.delete(action);
+      } else if (action === "bullet" || action === "ordered") {
+        activeActions.delete("bullet");
+        activeActions.delete("ordered");
+        activeActions.add(action);
+      } else {
+        activeActions.add(action);
       }
 
-      return `${indent}${layers.map((layer) => layer.marker).join("")}${content}`;
+      const quoteMarker = activeActions.has("quote") ? "> " : "";
+      let listMarker = "";
+
+      if (activeActions.has("bullet")) {
+        listMarker = "- ";
+      } else if (activeActions.has("ordered")) {
+        listMarker = `${orderedIndex}. `;
+        orderedIndex += 1;
+      }
+
+      return `${indent}${quoteMarker}${listMarker}${content}`;
     })
     .join("\n");
 
-  editor.setRangeText(replacement, lineStart, end, "select");
+  editor.setRangeText(replacement, lineStart, lineEnd, "select");
   editor.focus();
   render();
   updateCursorPosition();
