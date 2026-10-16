@@ -65,6 +65,7 @@ body {
 body {
   color: var(--ink);
   background: var(--canvas);
+  overscroll-behavior: none;
 }
 
 body::before {
@@ -489,8 +490,9 @@ button {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 14px;
   line-height: 1.82;
+  overscroll-behavior: none;
   tab-size: 2;
-  -webkit-overflow-scrolling: touch;
+  -webkit-overflow-scrolling: auto;
 }
 
 #editor::selection,
@@ -549,6 +551,7 @@ button {
   min-width: 0;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: none;
   padding: 32px clamp(32px, 5vw, 72px) 90px;
   color: var(--ink);
   font-family:
