@@ -289,36 +289,199 @@ function countAdjacentCharacters(value, index, direction, character) {
   return count;
 }
 
+const inlineFormats = {
+  bold: { before: "**", after: "**", placeholder: "粗体文字" },
+  italic: { before: "*", after: "*", placeholder: "斜体文字" },
+  link: {
+    before: "[",
+    after: "](https://example.com)",
+    placeholder: "链接文字",
+  },
+  code: { before: "`", after: "`", placeholder: "code" },
+  formula: { before: "$", after: "$", placeholder: "E = mc^2" },
+  image: {
+    before: "![",
+    after: "](https://avatars.githubusercontent.com/u/178354211?s=200&v=4)",
+    placeholder: "墨刻 Markdown 示例图片",
+  },
+};
+
+const incompatibleInlineFormats = {
+  bold: new Set(["code", "formula", "image"]),
+  italic: new Set(["code", "formula", "image"]),
+  link: new Set(["code", "formula", "image"]),
+  code: new Set(["bold", "italic", "link", "formula", "image"]),
+  formula: new Set(["bold", "italic", "link", "code", "image"]),
+  image: new Set(["bold", "italic", "link", "code", "formula"]),
+};
+
+function findLinkSuffix(value, end) {
+  if (value.slice(end, end + 2) !== "](") return null;
+
+  let depth = 1;
+
+  for (let index = end + 2; index < value.length; index += 1) {
+    if (value[index] === "(") depth += 1;
+    if (value[index] !== ")") continue;
+
+    depth -= 1;
+    if (depth === 0) return value.slice(end, index + 1);
+  }
+
+  return null;
+}
+
+function matchInlineLayer(value, start, end) {
+  const linkSuffix = findLinkSuffix(value, end);
+
+  if (linkSuffix && value.slice(start - 2, start) === "![") {
+    return {
+      beforeLength: 2,
+      afterLength: linkSuffix.length,
+      layers: [{ action: "image", before: "![", after: linkSuffix }],
+    };
+  }
+
+  if (linkSuffix && value[start - 1] === "[") {
+    return {
+      beforeLength: 1,
+      afterLength: linkSuffix.length,
+      layers: [{ action: "link", before: "[", after: linkSuffix }],
+    };
+  }
+
+  const symmetricFormats = [
+    ["code", "`"],
+    ["formula", "$"],
+  ];
+
+  for (const [action, marker] of symmetricFormats) {
+    if (value[start - 1] === marker && value[end] === marker) {
+      return {
+        beforeLength: 1,
+        afterLength: 1,
+        layers: [{ action, before: marker, after: marker }],
+      };
+    }
+  }
+
+  const starCount = Math.min(
+    countAdjacentCharacters(value, start, -1, "*"),
+    countAdjacentCharacters(value, end, 1, "*"),
+  );
+
+  if (starCount >= 3) {
+    return {
+      beforeLength: 3,
+      afterLength: 3,
+      layers: [
+        { action: "bold", before: "**", after: "**" },
+        { action: "italic", before: "*", after: "*" },
+      ],
+    };
+  }
+
+  if (starCount === 2) {
+    return {
+      beforeLength: 2,
+      afterLength: 2,
+      layers: [{ action: "bold", before: "**", after: "**" }],
+    };
+  }
+
+  if (starCount === 1) {
+    return {
+      beforeLength: 1,
+      afterLength: 1,
+      layers: [{ action: "italic", before: "*", after: "*" }],
+    };
+  }
+
+  return null;
+}
+
+function collectInlineLayers(value, start, end) {
+  const layers = [];
+  let outerStart = start;
+  let outerEnd = end;
+  let match = matchInlineLayer(value, outerStart, outerEnd);
+
+  while (match) {
+    layers.push(...match.layers);
+    outerStart -= match.beforeLength;
+    outerEnd += match.afterLength;
+    match = matchInlineLayer(value, outerStart, outerEnd);
+  }
+
+  return { layers, outerStart, outerEnd };
+}
+
+function toggleInlineFormat(action) {
+  const format = inlineFormats[action];
+  const start = editor.selectionStart;
+  const end = editor.selectionEnd;
+  const hasSelection = end > start;
+  const selected = hasSelection
+    ? editor.value.slice(start, end)
+    : format.placeholder;
+
+  if (!hasSelection) {
+    const replacement = `${format.before}${selected}${format.after}`;
+    editor.setRangeText(replacement, start, end, "end");
+    editor.focus();
+    editor.setSelectionRange(
+      start + format.before.length,
+      start + format.before.length + selected.length,
+    );
+    render();
+    updateCursorPosition();
+    queueSave();
+    return;
+  }
+
+  const {
+    layers: collectedLayers,
+    outerStart,
+    outerEnd,
+  } = collectInlineLayers(editor.value, start, end);
+  const seenActions = new Set();
+  let layers = collectedLayers.filter((layer) => {
+    if (seenActions.has(layer.action)) return false;
+    seenActions.add(layer.action);
+    return true;
+  });
+  const isActive = seenActions.has(action);
+
+  if (isActive) {
+    layers = layers.filter((layer) => layer.action !== action);
+  } else {
+    const incompatible = incompatibleInlineFormats[action];
+    layers = layers.filter((layer) => !incompatible.has(layer.action));
+    layers.unshift({ action, before: format.before, after: format.after });
+  }
+
+  let replacement = selected;
+
+  for (const layer of layers) {
+    replacement = `${layer.before}${replacement}${layer.after}`;
+  }
+
+  editor.setRangeText(replacement, outerStart, outerEnd, "end");
+  editor.focus();
+  const selectionStart =
+    outerStart +
+    layers.reduce((length, layer) => length + layer.before.length, 0);
+  editor.setSelectionRange(selectionStart, selectionStart + selected.length);
+  render();
+  updateCursorPosition();
+  queueSave();
+}
+
 function insertMarkdown(before, after = "", placeholder = "文字") {
   const start = editor.selectionStart;
   const end = editor.selectionEnd;
   const hasSelection = end > start;
   const selected = hasSelection ? editor.value.slice(start, end) : placeholder;
-
-  if (hasSelection) {
-    const wrapperStart = start - before.length;
-    const wrapperEnd = end + after.length;
-    let hasMatchingWrapper =
-      wrapperStart >= 0 &&
-      editor.value.slice(wrapperStart, start) === before &&
-      editor.value.slice(end, wrapperEnd) === after;
-
-    if (before === "*" && after === "*") {
-      const leftStars = countAdjacentCharacters(editor.value, start, -1, "*");
-      const rightStars = countAdjacentCharacters(editor.value, end, 1, "*");
-      hasMatchingWrapper = leftStars % 2 === 1 && rightStars % 2 === 1;
-    }
-
-    if (hasMatchingWrapper) {
-      editor.setRangeText(selected, wrapperStart, wrapperEnd, "end");
-      editor.focus();
-      editor.setSelectionRange(wrapperStart, wrapperStart + selected.length);
-      render();
-      updateCursorPosition();
-      queueSave();
-      return;
-    }
-  }
 
   const replacement = `${before}${selected}${after}`;
   editor.setRangeText(replacement, start, end, "end");
@@ -339,22 +502,67 @@ function insertMarkdown(before, after = "", placeholder = "文字") {
   queueSave();
 }
 
-function insertLinePrefix(prefix, placeholder = "列表项") {
+function parseLinePrefixes(line) {
+  const indent = line.match(/^\s*/)?.[0] || "";
+  const layers = [];
+  let content = line.slice(indent.length);
+  let match;
+
+  do {
+    match = content.match(/^(>\s?|[-*+]\s+|\d+\.\s+)/);
+    if (!match) continue;
+
+    const marker = match[0];
+    const action = marker.startsWith(">")
+      ? "quote"
+      : /^\d/.test(marker)
+        ? "ordered"
+        : "bullet";
+    layers.push({ action, marker });
+    content = content.slice(marker.length);
+  } while (match);
+
+  return { indent, layers, content };
+}
+
+function toggleLinePrefix(action, placeholder = "列表项") {
   const start = editor.selectionStart;
   const end = editor.selectionEnd;
   const lineStart = editor.value.lastIndexOf("\n", start - 1) + 1;
   const selection = editor.value.slice(lineStart, end) || placeholder;
-  const replacement = selection
-    .split("\n")
-    .map(
-      (line, index) =>
-        `${typeof prefix === "function" ? prefix(index) : prefix}${line}`,
-    )
+  const parsedLines = selection.split("\n").map(parseLinePrefixes);
+  const isActive = parsedLines.every(({ layers }) =>
+    layers.some((layer) => layer.action === action),
+  );
+  const replacement = parsedLines
+    .map(({ indent, layers: collectedLayers, content }, index) => {
+      const seenActions = new Set();
+      let layers = collectedLayers.filter((layer) => {
+        if (seenActions.has(layer.action)) return false;
+        seenActions.add(layer.action);
+        return true;
+      });
+
+      if (isActive) {
+        layers = layers.filter((layer) => layer.action !== action);
+      } else if (!seenActions.has(action)) {
+        const marker =
+          action === "ordered"
+            ? `${index + 1}. `
+            : action === "quote"
+              ? "> "
+              : "- ";
+        layers.unshift({ action, marker });
+      }
+
+      return `${indent}${layers.map((layer) => layer.marker).join("")}${content}`;
+    })
     .join("\n");
 
-  editor.setRangeText(replacement, lineStart, end, "end");
+  editor.setRangeText(replacement, lineStart, end, "select");
   editor.focus();
   render();
+  updateCursorPosition();
   queueSave();
 }
 
@@ -413,20 +621,15 @@ document.querySelector("#toolbar").addEventListener("click", (event) => {
   if (!button) return;
 
   const actions = {
-    bold: () => insertMarkdown("**", "**", "粗体文字"),
-    italic: () => insertMarkdown("*", "*", "斜体文字"),
-    link: () => insertMarkdown("[", "](https://example.com)", "链接文字"),
-    code: () => insertMarkdown("`", "`", "code"),
-    bullet: () => insertLinePrefix("- "),
-    ordered: () => insertLinePrefix((index) => `${index + 1}. `),
-    quote: () => insertLinePrefix("> ", "引用内容"),
-    formula: () => insertMarkdown("$", "$", "E = mc^2"),
-    image: () =>
-      insertMarkdown(
-        "![",
-        "](https://avatars.githubusercontent.com/u/178354211?s=200&v=4)",
-        "墨刻 Markdown 示例图片",
-      ),
+    bold: () => toggleInlineFormat("bold"),
+    italic: () => toggleInlineFormat("italic"),
+    link: () => toggleInlineFormat("link"),
+    code: () => toggleInlineFormat("code"),
+    bullet: () => toggleLinePrefix("bullet"),
+    ordered: () => toggleLinePrefix("ordered"),
+    quote: () => toggleLinePrefix("quote", "引用内容"),
+    formula: () => toggleInlineFormat("formula"),
+    image: () => toggleInlineFormat("image"),
   };
 
   actions[button.dataset.action]?.();
@@ -454,9 +657,9 @@ editor.addEventListener("keydown", (event) => {
   if (!modifier) return;
 
   const shortcuts = {
-    b: () => insertMarkdown("**", "**", "粗体文字"),
-    i: () => insertMarkdown("*", "*", "斜体文字"),
-    k: () => insertMarkdown("[", "](https://example.com)", "链接文字"),
+    b: () => toggleInlineFormat("bold"),
+    i: () => toggleInlineFormat("italic"),
+    k: () => toggleInlineFormat("link"),
   };
 
   const action = shortcuts[event.key.toLowerCase()];
