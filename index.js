@@ -469,11 +469,28 @@ editor.addEventListener("keydown", (event) => {
 editor.addEventListener("scroll", () => {
   syncLineNumbers();
   if (syncingScroll || workspace.dataset.mode !== "split") return;
+
   syncingScroll = true;
-  const editorRange = editor.scrollHeight - editor.clientHeight;
-  const previewRange = preview.scrollHeight - preview.clientHeight;
+  const editorRange = Math.max(0, editor.scrollHeight - editor.clientHeight);
+  const previewRange = Math.max(0, preview.scrollHeight - preview.clientHeight);
   preview.scrollTop =
     editorRange > 0 ? (editor.scrollTop / editorRange) * previewRange : 0;
+
+  window.requestAnimationFrame(() => {
+    syncingScroll = false;
+  });
+});
+
+preview.addEventListener("scroll", () => {
+  if (syncingScroll || workspace.dataset.mode !== "split") return;
+
+  syncingScroll = true;
+  const previewRange = Math.max(0, preview.scrollHeight - preview.clientHeight);
+  const editorRange = Math.max(0, editor.scrollHeight - editor.clientHeight);
+  editor.scrollTop =
+    previewRange > 0 ? (preview.scrollTop / previewRange) * editorRange : 0;
+  syncLineNumbers();
+
   window.requestAnimationFrame(() => {
     syncingScroll = false;
   });
