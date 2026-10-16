@@ -153,7 +153,7 @@ const storageKeys = {
 };
 
 const editor = document.querySelector("#editor");
-const lineNumbers = document.querySelector("#line-numbers");
+const lineNumbersInner = document.querySelector("#line-numbers-inner");
 const preview = document.querySelector("#preview");
 const workspace = document.querySelector("#workspace");
 const saveState = document.querySelector("#save-state");
@@ -241,9 +241,13 @@ function updateLineNumbers() {
     fragment.append(lineNumber);
   }
 
-  lineNumbers.replaceChildren(fragment);
-  lineNumbers.scrollTop = editor.scrollTop;
+  lineNumbersInner.replaceChildren(fragment);
+  syncLineNumbers();
   renderedLineCount = lineCount;
+}
+
+function syncLineNumbers() {
+  lineNumbersInner.style.transform = `translate3d(0, ${-editor.scrollTop}px, 0)`;
 }
 
 function updateDocumentStats(value) {
@@ -463,7 +467,7 @@ editor.addEventListener("keydown", (event) => {
 });
 
 editor.addEventListener("scroll", () => {
-  lineNumbers.scrollTop = editor.scrollTop;
+  syncLineNumbers();
   if (syncingScroll || workspace.dataset.mode !== "split") return;
   syncingScroll = true;
   const editorRange = editor.scrollHeight - editor.clientHeight;

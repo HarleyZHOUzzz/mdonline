@@ -450,7 +450,6 @@ button {
 .line-numbers {
   height: 100%;
   min-height: 0;
-  padding: 31px 11px 72px 0;
   overflow: hidden;
   border-right: 1px solid var(--line);
   color: var(--ink-faint);
@@ -462,7 +461,14 @@ button {
   user-select: none;
 }
 
-.line-numbers span {
+.line-numbers-inner {
+  min-height: 100%;
+  padding: 31px 11px 72px 0;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.line-numbers-inner span {
   display: block;
   height: 2.1233333333em;
 }
@@ -484,6 +490,7 @@ button {
   font-size: 14px;
   line-height: 1.82;
   tab-size: 2;
+  -webkit-overflow-scrolling: touch;
 }
 
 #editor::selection,
@@ -888,7 +895,7 @@ button {
     grid-template-columns: 42px minmax(0, 1fr);
   }
 
-  .line-numbers {
+  .line-numbers-inner {
     padding: 22px 9px 56px 0;
   }
 
