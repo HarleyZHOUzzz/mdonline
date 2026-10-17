@@ -376,6 +376,8 @@ button {
 }
 
 .pane-header {
+  position: relative;
+  z-index: 10;
   display: flex;
   min-width: 0;
   align-items: center;
@@ -384,7 +386,7 @@ button {
   padding: 0 18px;
   border-bottom: 1px solid var(--line);
   background: var(--paper);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .pane-title {
@@ -482,6 +484,7 @@ button {
 
 .more-actions {
   position: relative;
+  z-index: 12;
 }
 
 .more-menu {
