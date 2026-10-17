@@ -311,6 +311,7 @@ const moreButton = document.querySelector("#more-button");
 const moreMenu = document.querySelector("#more-menu");
 const githubLink = document.querySelector("#github-link");
 const toast = document.querySelector("#toast");
+const diagnosticHoverCard = document.querySelector("#diagnostic-hover-card");
 const diagnosticsPanel = document.querySelector("#diagnostics-panel");
 const diagnosticsSummary = document.querySelector("#diagnostics-summary");
 const diagnosticsList = document.querySelector("#diagnostics-list");
@@ -506,40 +507,18 @@ function appendDiagnosticRun(fragment, text, severity) {
 }
 
 function renderDiagnosticLine(fragment, line, diagnostics) {
+  const severity = diagnostics.some(
+    (diagnostic) => diagnostic.severity === "error",
+  )
+    ? "error"
+    : diagnostics[0]?.severity;
+
   if (!line.length) {
-    if (diagnostics.length) {
-      appendDiagnosticRun(fragment, "\u200b", diagnostics[0].severity);
-    }
+    if (severity) appendDiagnosticRun(fragment, "\u200b", severity);
     return;
   }
 
-  const severities = Array(line.length).fill(null);
-  for (const diagnostic of diagnostics) {
-    const start = Math.min(line.length - 1, Math.max(0, diagnostic.column - 1));
-    const end = Math.min(
-      line.length,
-      start + Math.max(1, diagnostic.length || 1),
-    );
-
-    for (let index = start; index < end; index += 1) {
-      if (diagnostic.severity === "error" || !severities[index]) {
-        severities[index] = diagnostic.severity;
-      }
-    }
-  }
-
-  let runStart = 0;
-  for (let index = 1; index <= line.length; index += 1) {
-    if (index < line.length && severities[index] === severities[runStart]) {
-      continue;
-    }
-    appendDiagnosticRun(
-      fragment,
-      line.slice(runStart, index),
-      severities[runStart],
-    );
-    runStart = index;
-  }
+  appendDiagnosticRun(fragment, line, severity);
 }
 
 function renderDiagnosticOverlay(value) {
@@ -673,6 +652,45 @@ function updateDiagnostics(value) {
   renderDiagnosticOverlay(value);
 
   if (!currentDiagnostics.length) setDiagnosticsPanel(false);
+}
+
+function hideDiagnosticHover() {
+  diagnosticHoverCard.hidden = true;
+  diagnosticHoverCard.setAttribute("aria-hidden", "true");
+}
+
+function updateDiagnosticHover(event) {
+  if (!currentDiagnostics.length) return hideDiagnosticHover();
+
+  const editorBounds = editor.getBoundingClientRect();
+  const style = getComputedStyle(editor);
+  const lineHeight = Number.parseFloat(style.lineHeight);
+  const paddingTop = Number.parseFloat(style.paddingTop);
+  const relativeY = event.clientY - editorBounds.top + editor.scrollTop;
+  const line = Math.floor((relativeY - paddingTop) / lineHeight) + 1;
+  const diagnostics = currentDiagnostics.filter(
+    (diagnostic) => diagnostic.line === line,
+  );
+
+  if (!diagnostics.length) return hideDiagnosticHover();
+
+  diagnosticHoverCard.textContent = diagnostics
+    .map((diagnostic) => localizeDiagnostic(diagnostic))
+    .join("\n");
+  diagnosticHoverCard.hidden = false;
+  diagnosticHoverCard.setAttribute("aria-hidden", "false");
+
+  const margin = 14;
+  const maxLeft = window.innerWidth - diagnosticHoverCard.offsetWidth - margin;
+  const maxTop = window.innerHeight - diagnosticHoverCard.offsetHeight - margin;
+  diagnosticHoverCard.style.left = `${Math.max(
+    margin,
+    Math.min(event.clientX + 16, maxLeft),
+  )}px`;
+  diagnosticHoverCard.style.top = `${Math.max(
+    margin,
+    Math.min(event.clientY + 18, maxTop),
+  )}px`;
 }
 
 function jumpToDiagnostic(line, column) {
@@ -1589,6 +1607,7 @@ editor.addEventListener("keydown", (event) => {
 });
 
 editor.addEventListener("scroll", () => {
+  hideDiagnosticHover();
   syncLineNumbers();
   if (syncingScroll || workspace.dataset.mode !== "split") return;
 
@@ -1602,6 +1621,9 @@ editor.addEventListener("scroll", () => {
     syncingScroll = false;
   });
 });
+
+editor.addEventListener("pointermove", updateDiagnosticHover);
+editor.addEventListener("pointerleave", hideDiagnosticHover);
 
 preview.addEventListener("scroll", () => {
   if (syncingScroll || workspace.dataset.mode !== "split") return;
@@ -1695,8 +1717,19 @@ resizer.addEventListener("pointermove", (event) => {
         : "split";
   const modeChanged = workspace.dataset.mode !== targetMode;
 
-  if (modeChanged) workspace.classList.add("is-snapping");
-  if (modeChanged) setMode(targetMode);
+  if (modeChanged) {
+    workspace.classList.add("is-snapping");
+    if (targetMode === "preview") {
+      workspace.style.setProperty("--editor-width", `${paneSnapThreshold}%`);
+    } else if (targetMode === "edit") {
+      workspace.style.setProperty(
+        "--editor-width",
+        `${100 - paneSnapThreshold}%`,
+      );
+    }
+    void workspace.offsetWidth;
+    setMode(targetMode);
+  }
 
   if (targetMode === "split") {
     workspace.style.setProperty(

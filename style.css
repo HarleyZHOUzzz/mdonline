@@ -314,6 +314,7 @@ button {
 
 .save-state {
   display: inline-flex;
+  min-width: 0;
   align-items: center;
   gap: 7px;
   margin-left: 5px;
@@ -322,8 +323,14 @@ button {
   white-space: nowrap;
 }
 
+.save-state span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .save-dot,
-.live-label > span {
+.live-label > span:first-child {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -370,22 +377,37 @@ button {
 
 .pane-header {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 0 18px;
   border-bottom: 1px solid var(--line);
   background: var(--paper);
+  overflow: hidden;
 }
 
 .pane-title {
   display: inline-flex;
+  min-width: 0;
+  flex: 0 1 auto;
   align-items: center;
   gap: 8px;
   color: var(--ink-soft);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.pane-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbar {
+  flex: 0 0 auto;
 }
 
 .toolbar {
@@ -665,13 +687,24 @@ button {
   display: grid;
   cursor: col-resize;
   place-items: center;
-  border-right: 1px solid var(--line);
-  border-left: 1px solid var(--line);
-  background: var(--canvas);
+  border-right: 0;
+  border-left: 0;
+  background: var(--paper);
   touch-action: none;
   transition:
     opacity 160ms ease,
     border-color 160ms ease;
+}
+
+.resizer::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: color-mix(in srgb, var(--line) 52%, transparent);
+  content: "";
+  transform: translateX(-50%);
 }
 
 .resizer span {
@@ -697,14 +730,23 @@ button {
 
 .live-label {
   display: inline-flex;
+  min-width: 0;
+  flex: 0 1 auto;
   align-items: center;
   gap: 8px;
   color: var(--ink-faint);
   font-size: 11px;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
-.live-label > span {
+.live-label span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-label > span:first-child {
   width: 5px;
   height: 5px;
 }
@@ -1091,6 +1133,27 @@ button {
 .toast.is-visible {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+.diagnostic-hover-card {
+  position: fixed;
+  z-index: 40;
+  max-width: min(360px, calc(100vw - 28px));
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--error) 40%, var(--line));
+  border-radius: var(--radius-small);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 96%, transparent);
+  box-shadow: 0 10px 26px rgba(28, 25, 20, 0.16);
+  font-size: 12px;
+  line-height: 1.55;
+  pointer-events: none;
+  white-space: pre-line;
+  backdrop-filter: blur(10px);
+}
+
+.diagnostic-hover-card[hidden] {
+  display: none;
 }
 
 @keyframes pulse {
