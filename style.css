@@ -345,6 +345,15 @@ button {
   background: var(--paper);
   box-shadow: var(--shadow);
   overflow: hidden;
+  transition: grid-template-columns 280ms cubic-bezier(0.22, 0.85, 0.32, 1);
+}
+
+.workspace.is-dragging {
+  transition: none;
+}
+
+.workspace.is-dragging.is-snapping {
+  transition: grid-template-columns 280ms cubic-bezier(0.22, 0.85, 0.32, 1);
 }
 
 .pane {
@@ -353,6 +362,10 @@ button {
   min-height: 0;
   grid-template-rows: 52px minmax(0, 1fr) var(--status-height);
   background: color-mix(in srgb, var(--paper) 96%, transparent);
+  overflow: hidden;
+  transition:
+    opacity 180ms ease,
+    transform 280ms cubic-bezier(0.22, 0.85, 0.32, 1);
 }
 
 .pane-header {
@@ -656,6 +669,9 @@ button {
   border-left: 1px solid var(--line);
   background: var(--canvas);
   touch-action: none;
+  transition:
+    opacity 160ms ease,
+    border-color 160ms ease;
 }
 
 .resizer span {
@@ -1023,21 +1039,33 @@ button {
   justify-content: flex-end;
 }
 
-.workspace[data-mode="edit"],
+.workspace[data-mode="edit"] {
+  grid-template-columns: minmax(0, 1fr) 0 minmax(0, 0);
+}
+
 .workspace[data-mode="preview"] {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0) 0 minmax(0, 1fr);
+}
+
+.workspace[data-mode="edit"] .preview-pane,
+.workspace[data-mode="preview"] .editor-pane {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.workspace[data-mode="edit"] .preview-pane {
+  transform: translateX(18px);
+}
+
+.workspace[data-mode="preview"] .editor-pane {
+  transform: translateX(-18px);
 }
 
 .workspace[data-mode="edit"] .resizer,
-.workspace[data-mode="edit"] .preview-pane,
-.workspace[data-mode="preview"] .resizer,
-.workspace[data-mode="preview"] .editor-pane {
-  display: none;
-}
-
-.workspace[data-mode="edit"] .editor-pane,
-.workspace[data-mode="preview"] .preview-pane {
-  display: grid;
+.workspace[data-mode="preview"] .resizer {
+  border-color: transparent;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .toast {
@@ -1164,6 +1192,13 @@ button {
   .workspace[data-mode="edit"] .editor-pane,
   .workspace[data-mode="preview"] .preview-pane {
     height: 100%;
+  }
+
+  .workspace[data-mode="edit"] .preview-pane,
+  .workspace[data-mode="preview"] .editor-pane,
+  .workspace[data-mode="edit"] .resizer,
+  .workspace[data-mode="preview"] .resizer {
+    display: none;
   }
 
   .pane {

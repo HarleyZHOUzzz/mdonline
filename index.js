@@ -327,6 +327,8 @@ let renderedLineCount = 0;
 let currentDiagnostics = [];
 let currentLanguage = "zh-CN";
 
+const paneSnapThreshold = 18;
+
 const md = new MarkdownIt({
   breaks: true,
   html: false,
@@ -1677,6 +1679,7 @@ resizer.addEventListener("pointerdown", (event) => {
   if (workspace.dataset.mode !== "split") return;
   dragging = true;
   resizer.setPointerCapture(event.pointerId);
+  workspace.classList.add("is-dragging");
   document.body.classList.add("is-resizing");
 });
 
@@ -1684,16 +1687,40 @@ resizer.addEventListener("pointermove", (event) => {
   if (!dragging) return;
   const bounds = workspace.getBoundingClientRect();
   const percentage = ((event.clientX - bounds.left) / bounds.width) * 100;
-  workspace.style.setProperty(
-    "--editor-width",
-    `${Math.min(72, Math.max(28, percentage))}%`,
-  );
+  const targetMode =
+    percentage <= paneSnapThreshold
+      ? "preview"
+      : percentage >= 100 - paneSnapThreshold
+        ? "edit"
+        : "split";
+  const modeChanged = workspace.dataset.mode !== targetMode;
+
+  if (modeChanged) workspace.classList.add("is-snapping");
+  if (modeChanged) setMode(targetMode);
+
+  if (targetMode === "split") {
+    workspace.style.setProperty(
+      "--editor-width",
+      `${Math.min(82, Math.max(18, percentage))}%`,
+    );
+  }
 });
 
 resizer.addEventListener("pointerup", (event) => {
   dragging = false;
   resizer.releasePointerCapture(event.pointerId);
+  workspace.classList.remove("is-dragging", "is-snapping");
   document.body.classList.remove("is-resizing");
+});
+
+resizer.addEventListener("lostpointercapture", () => {
+  dragging = false;
+  workspace.classList.remove("is-dragging", "is-snapping");
+  document.body.classList.remove("is-resizing");
+});
+
+workspace.addEventListener("transitionend", (event) => {
+  if (event.propertyName === "grid-template-columns") syncDiagnosticOverlay();
 });
 
 const editorResizeObserver = new ResizeObserver(syncDiagnosticOverlay);
