@@ -276,6 +276,280 @@ function lintVisibleLine(line, lineNumber, diagnostics, columnOffset) {
   }
 }
 
+function lintFullWidthMarkdownSyntax(
+  line,
+  lineNumber,
+  diagnostics,
+  columnOffset,
+) {
+  const add = (match, code, message) => {
+    diagnostics.push(
+      createDiagnostic(
+        lineNumber,
+        match.index + columnOffset + 1,
+        "error",
+        code,
+        message,
+        match[0].length,
+      ),
+    );
+  };
+
+  const heading = /^ {0,3}＃{1,6}/.exec(line);
+  if (heading) {
+    add(
+      heading,
+      "fullwidth-heading-marker",
+      "标题应使用半角 #，不要使用全角 ＃",
+    );
+  }
+
+  const quote = /^ {0,3}＞/.exec(line);
+  if (quote) {
+    add(quote, "fullwidth-quote-marker", "引用应使用半角 >，不要使用全角 ＞");
+  }
+
+  const fence = /^ {0,3}｀{3,}/.exec(line);
+  if (fence) {
+    add(
+      fence,
+      "fullwidth-code-fence",
+      "代码围栏应使用半角反引号 ```，不要使用全角 ｀",
+    );
+    return;
+  }
+
+  const fullWidthList = /^ {0,3}[－＋＊](?=\s|［|\[)/.exec(line);
+  if (fullWidthList) {
+    add(
+      fullWidthList,
+      "fullwidth-list-marker",
+      "列表标记应使用半角 -、+ 或 *，不要使用全角符号",
+    );
+  }
+
+  const fullWidthLink =
+    /(?:！|!)?(?:［[^］]*］(?:（[^）]*）|\([^)]*\))|\[[^\]]*\]（[^）]*）)/g;
+  let link = fullWidthLink.exec(line);
+  while (link) {
+    add(
+      link,
+      "fullwidth-link-delimiter",
+      "链接或图片应使用半角 []()，不要使用全角括号或方括号",
+    );
+    link = fullWidthLink.exec(line);
+  }
+
+  const inlineCode = /｀[^｀\n]+｀/g;
+  let code = inlineCode.exec(line);
+  while (code) {
+    add(
+      code,
+      "fullwidth-inline-code-marker",
+      "行内代码应使用半角反引号 `，不要使用全角 ｀",
+    );
+    code = inlineCode.exec(line);
+  }
+
+  const formula = /＄[^＄\n]+＄/g;
+  let math = formula.exec(line);
+  while (math) {
+    add(
+      math,
+      "fullwidth-formula-delimiter",
+      "公式应使用半角 $，不要使用全角 ＄",
+    );
+    math = formula.exec(line);
+  }
+
+  const tablePipe = /｜/.exec(line);
+  if (
+    tablePipe &&
+    (line.trimStart().startsWith("｜") || line.trimEnd().endsWith("｜"))
+  ) {
+    add(
+      tablePipe,
+      "fullwidth-table-pipe",
+      "表格列分隔符应使用半角 |，不要使用全角 ｜",
+    );
+  }
+
+  const emphasis = /＊{1,3}[^＊\n]+＊{1,3}/g;
+  let emphasisMatch = emphasis.exec(line);
+  while (emphasisMatch) {
+    add(
+      emphasisMatch,
+      "fullwidth-emphasis-marker",
+      "强调语法应使用半角 *，不要使用全角 ＊",
+    );
+    emphasisMatch = emphasis.exec(line);
+  }
+}
+
+function lintListSyntax(line, lineNumber, diagnostics, columnOffset) {
+  const task = /^ {0,3}([-+*]|\d{1,9}[.)])(\s*)\[([^\]\n]*)(\])?/.exec(line);
+  if (task) {
+    const marker = task[1];
+    const space = task[2];
+    const state = task[3];
+    const closed = task[4] === "]";
+    const taskColumn = task.index + marker.length + columnOffset + 1;
+
+    if (!space) {
+      diagnostics.push(
+        createDiagnostic(
+          lineNumber,
+          task.index + columnOffset + 1,
+          "error",
+          "task-list-spacing",
+          `任务列表应写为 "${marker} [x]"，列表标记后需要一个空格`,
+          marker.length + 1,
+        ),
+      );
+    }
+    if (!closed) {
+      diagnostics.push(
+        createDiagnostic(
+          lineNumber,
+          taskColumn,
+          "error",
+          "unclosed-task-checkbox",
+          "任务列表复选框缺少闭合的 ]",
+          Math.max(1, line.length - task.index - marker.length - space.length),
+        ),
+      );
+    } else if (state !== " " && state.toLowerCase() !== "x") {
+      diagnostics.push(
+        createDiagnostic(
+          lineNumber,
+          taskColumn + 1,
+          "error",
+          "invalid-task-state",
+          "任务状态只能是空格、x 或 X",
+          Math.max(1, state.length),
+        ),
+      );
+    }
+    return;
+  }
+
+  const unordered = /^ {0,3}([-+*])(?=[^\s])/u.exec(line);
+  if (unordered && !/^ {0,3}(?:---|\*\*\*)/.test(line)) {
+    diagnostics.push(
+      createDiagnostic(
+        lineNumber,
+        unordered.index + columnOffset + 1,
+        "warning",
+        "list-marker-spacing",
+        "无序列表标记后应添加一个空格",
+        2,
+      ),
+    );
+  }
+
+  const ordered = /^ {0,3}\d{1,9}[.)](?=[^\s])/.exec(line);
+  if (ordered) {
+    diagnostics.push(
+      createDiagnostic(
+        lineNumber,
+        ordered.index + columnOffset + 1,
+        "warning",
+        "ordered-list-marker-spacing",
+        "有序列表标记后应添加一个空格",
+        ordered[0].length + 1,
+      ),
+    );
+  }
+}
+
+function lintHeadingStructure(lines, fencedLines, diagnostics) {
+  let previousLevel = null;
+
+  lines.forEach((line, index) => {
+    const lineNumber = index + 1;
+    if (fencedLines.has(lineNumber)) return;
+    const { content, offset } = stripContainerPrefix(line);
+    const heading = /^ {0,3}(#{1,6})(?:\s|$)/.exec(content);
+    if (!heading) return;
+
+    const level = heading[1].length;
+    if (previousLevel && level > previousLevel + 1) {
+      diagnostics.push(
+        createDiagnostic(
+          lineNumber,
+          heading.index + offset + 1,
+          "warning",
+          "heading-level-skip",
+          `标题层级从 H${previousLevel} 跳到了 H${level}`,
+          level,
+        ),
+      );
+    }
+    previousLevel = level;
+  });
+}
+
+function tableCells(line) {
+  let value = line.trim();
+  if (value.startsWith("|")) value = value.slice(1);
+  if (value.endsWith("|")) value = value.slice(0, -1);
+  return value.split("|").map((cell) => cell.trim());
+}
+
+function lintTables(lines, fencedLines, diagnostics) {
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    const lineNumber = index + 1;
+    if (fencedLines.has(lineNumber) || fencedLines.has(lineNumber + 1))
+      continue;
+    const header = stripContainerPrefix(lines[index]);
+    const separator = stripContainerPrefix(lines[index + 1]);
+    if (!header.content.includes("|") || !separator.content.includes("|"))
+      continue;
+
+    const separatorCells = tableCells(separator.content);
+    if (!separatorCells.some((cell) => /[-:]/.test(cell))) continue;
+    const headerCells = tableCells(header.content);
+    const invalidCell = separatorCells.find(
+      (cell) => !/^:?-{3,}:?$/.test(cell),
+    );
+
+    if (invalidCell !== undefined) {
+      diagnostics.push(
+        createDiagnostic(
+          lineNumber + 1,
+          separator.offset + 1,
+          "error",
+          "invalid-table-separator",
+          "表格分隔行的每一列应为至少 3 个 -，可在两侧使用 : 对齐",
+          Math.max(1, separator.content.length),
+        ),
+      );
+    }
+    if (headerCells.length !== separatorCells.length) {
+      diagnostics.push(
+        createDiagnostic(
+          lineNumber + 1,
+          separator.offset + 1,
+          "error",
+          "table-column-count",
+          "表头与分隔行的列数不一致",
+          Math.max(1, separator.content.length),
+        ),
+      );
+    }
+  }
+}
+
+function lintMarkdownSyntax(lines, fencedLines, diagnostics) {
+  lines.forEach((line, index) => {
+    const lineNumber = index + 1;
+    if (fencedLines.has(lineNumber)) return;
+    const { content, offset } = stripContainerPrefix(line);
+    lintFullWidthMarkdownSyntax(content, lineNumber, diagnostics, offset);
+    lintListSyntax(content, lineNumber, diagnostics, offset);
+  });
+}
+
 function collectFenceLines(lines, diagnostics, isKnownLanguage) {
   const fencedLines = new Set();
   let fence = null;
@@ -437,6 +711,9 @@ export function lintMarkdown(source, options = {}) {
   const fencedLines = collectFenceLines(lines, diagnostics, isKnownLanguage);
 
   lintMath(lines, fencedLines, diagnostics);
+  lintMarkdownSyntax(lines, fencedLines, diagnostics);
+  lintHeadingStructure(lines, fencedLines, diagnostics);
+  lintTables(lines, fencedLines, diagnostics);
 
   return diagnostics
     .filter(

@@ -61,3 +61,48 @@ test("reports the absolute column inside nested quotes", () => {
   assert.equal(formula.column, 14);
   assert.ok(formula.length > 1);
 });
+
+test("reports malformed task lists and list marker spacing", () => {
+  const diagnostics = lint(
+    "-[x] missing space\n- [y] invalid state\n- [x incomplete\n1.item",
+  );
+  const codes = diagnostics.map((item) => item.code);
+
+  assert.ok(codes.includes("task-list-spacing"));
+  assert.ok(codes.includes("invalid-task-state"));
+  assert.ok(codes.includes("unclosed-task-checkbox"));
+  assert.ok(codes.includes("ordered-list-marker-spacing"));
+});
+
+test("accepts correctly formatted task lists and tables", () => {
+  const diagnostics = lint(
+    "- [ ] 待办事项\n- [x] 已完成事项\n\n| 名称 | 值 |\n| :--- | ---: |\n| A | 1 |",
+  );
+
+  assert.deepEqual(diagnostics, []);
+});
+
+test("reports full-width Markdown syntax but not ordinary Chinese punctuation", () => {
+  const diagnostics = lint(
+    "＃ 标题\n＞ 引用\n！［图片］（https://example.com/image.png）\n｀code｀\n＄x^2＄\n｜名称｜值｜\n＊强调＊\n\n你好，世界！（这是正常中文标点。）",
+  );
+  const codes = diagnostics.map((item) => item.code);
+
+  assert.ok(codes.includes("fullwidth-heading-marker"));
+  assert.ok(codes.includes("fullwidth-quote-marker"));
+  assert.ok(codes.includes("fullwidth-link-delimiter"));
+  assert.ok(codes.includes("fullwidth-inline-code-marker"));
+  assert.ok(codes.includes("fullwidth-formula-delimiter"));
+  assert.ok(codes.includes("fullwidth-table-pipe"));
+  assert.ok(codes.includes("fullwidth-emphasis-marker"));
+  assert.ok(!diagnostics.some((item) => item.line === 9));
+});
+
+test("reports heading skips and malformed table separators", () => {
+  const diagnostics = lint("# H1\n### H3\n\n| A | B |\n| -- | --- | --- |");
+  const codes = diagnostics.map((item) => item.code);
+
+  assert.ok(codes.includes("heading-level-skip"));
+  assert.ok(codes.includes("invalid-table-separator"));
+  assert.ok(codes.includes("table-column-count"));
+});
