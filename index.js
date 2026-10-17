@@ -153,6 +153,139 @@ const storageKeys = {
   content: "moke-markdown-content",
   mode: "moke-markdown-mode",
   theme: "moke-markdown-theme",
+  language: "moke-markdown-language",
+};
+
+const translations = {
+  "zh-CN": {
+    pageTitle: "墨刻 Markdown",
+    viewMode: "视图模式",
+    editOnly: "仅编辑",
+    splitView: "分栏",
+    previewOnly: "仅预览",
+    newDocument: "新建文稿",
+    language: "界面语言",
+    switchTheme: "切换主题",
+    switchToDark: "切换到深色主题",
+    switchToLight: "切换到浅色主题",
+    openGithub: "打开 GitHub 仓库",
+    saved: "已自动保存",
+    saving: "正在保存",
+    editorArea: "Markdown 编辑区",
+    editor: "编辑器",
+    formatToolbar: "Markdown 格式工具栏",
+    bold: "粗体",
+    boldShortcut: "粗体 ⌘B",
+    italic: "斜体",
+    italicShortcut: "斜体 ⌘I",
+    link: "链接",
+    linkShortcut: "链接 ⌘K",
+    inlineCode: "行内代码",
+    codeBlock: "代码块",
+    bulletList: "无序列表",
+    orderedList: "有序列表",
+    quote: "引用",
+    quoteTooltip: "引用（Shift 点击增加层级）",
+    formula: "公式",
+    latexFormula: "LaTeX 公式",
+    image: "图片",
+    moreActions: "更多操作",
+    more: "更多",
+    copyMarkdown: "复制 Markdown",
+    downloadMarkdown: "下载 .md",
+    markdownEditor: "Markdown 文本编辑器",
+    diagnosticResults: "格式检查结果",
+    formatCheck: "格式检查",
+    closeDiagnostics: "关闭格式检查面板",
+    spaces: "空格：2",
+    resizePanes: "拖动调整编辑区和预览区宽度",
+    previewArea: "Markdown 预览区",
+    preview: "预览",
+    livePreview: "实时渲染",
+    formatNormal: "格式正常",
+    noFormatIssues: "没有发现格式问题",
+    multilineCode: "多行代码请使用代码块",
+    inlineNoMultiline: "行内格式不能跨越多行",
+    nestedLinks: "链接不能嵌套",
+    codeList: "代码块不能直接转换为列表",
+    newDocumentConfirm: "新建文稿会清空当前内容，确定继续吗？",
+    copySuccess: "Markdown 已复制",
+    downloadSuccess: "文稿已下载",
+    unnamedDocument: "未命名文稿",
+    writeHere: "从这里开始书写……",
+    boldPlaceholder: "粗体文字",
+    italicPlaceholder: "斜体文字",
+    linkPlaceholder: "链接文字",
+    imagePlaceholder: "墨刻 Markdown 示例图片",
+    textPlaceholder: "文字",
+    listPlaceholder: "列表项",
+    quotePlaceholder: "引用内容",
+  },
+  en: {
+    pageTitle: "Moke Markdown",
+    viewMode: "View mode",
+    editOnly: "Editor",
+    splitView: "Split",
+    previewOnly: "Preview",
+    newDocument: "New document",
+    language: "Interface language",
+    switchTheme: "Switch theme",
+    switchToDark: "Switch to dark theme",
+    switchToLight: "Switch to light theme",
+    openGithub: "Open GitHub repository",
+    saved: "Saved automatically",
+    saving: "Saving",
+    editorArea: "Markdown editor",
+    editor: "Editor",
+    formatToolbar: "Markdown formatting toolbar",
+    bold: "Bold",
+    boldShortcut: "Bold ⌘B",
+    italic: "Italic",
+    italicShortcut: "Italic ⌘I",
+    link: "Link",
+    linkShortcut: "Link ⌘K",
+    inlineCode: "Inline code",
+    codeBlock: "Code block",
+    bulletList: "Bullet list",
+    orderedList: "Ordered list",
+    quote: "Quote",
+    quoteTooltip: "Quote (Shift-click to add a level)",
+    formula: "Formula",
+    latexFormula: "LaTeX formula",
+    image: "Image",
+    moreActions: "More actions",
+    more: "More",
+    copyMarkdown: "Copy Markdown",
+    downloadMarkdown: "Download .md",
+    markdownEditor: "Markdown text editor",
+    diagnosticResults: "Format check results",
+    formatCheck: "Format check",
+    closeDiagnostics: "Close format check panel",
+    spaces: "Spaces: 2",
+    resizePanes: "Resize editor and preview panes",
+    previewArea: "Markdown preview",
+    preview: "Preview",
+    livePreview: "Live preview",
+    formatNormal: "No format issues",
+    noFormatIssues: "No format issues found",
+    multilineCode: "Use a code block for multiline code",
+    inlineNoMultiline: "Inline formatting cannot span multiple lines",
+    nestedLinks: "Links cannot be nested",
+    codeList: "A code block cannot be converted directly into a list",
+    newDocumentConfirm:
+      "Creating a new document will clear the current content. Continue?",
+    copySuccess: "Markdown copied",
+    downloadSuccess: "Document downloaded",
+    unnamedDocument: "Untitled document",
+    writeHere: "Start writing here…",
+    boldPlaceholder: "bold text",
+    italicPlaceholder: "italic text",
+    linkPlaceholder: "link text",
+    imagePlaceholder: "Moke Markdown example image",
+    textPlaceholder: "text",
+    listPlaceholder: "list item",
+    quotePlaceholder: "quote",
+  },
 };
 
 const editor = document.querySelector("#editor");
@@ -184,6 +317,7 @@ const diagnosticsList = document.querySelector("#diagnostics-list");
 const diagnosticsClose = document.querySelector("#diagnostics-close");
 const formatStatus = document.querySelector("#format-status");
 const formatSummary = document.querySelector("#format-summary");
+const languageButtons = [...document.querySelectorAll("[data-language]")];
 
 let saveTimer;
 let toastTimer;
@@ -191,6 +325,7 @@ let dragging = false;
 let syncingScroll = false;
 let renderedLineCount = 0;
 let currentDiagnostics = [];
+let currentLanguage = "zh-CN";
 
 const md = new MarkdownIt({
   breaks: true,
@@ -238,6 +373,88 @@ md.renderer.rules.link_open = (
   tokens[index].attrSet("rel", "noreferrer noopener");
   return defaultLinkRenderer(tokens, index, options, environment, renderer);
 };
+
+function t(key) {
+  return (
+    translations[currentLanguage][key] || translations["zh-CN"][key] || key
+  );
+}
+
+function localizeDiagnostic(diagnostic) {
+  if (currentLanguage === "zh-CN") return diagnostic.message;
+
+  const messages = {
+    "unclosed-inline-code": "Inline code is missing a closing backtick",
+    "empty-formula": "Formula content is empty",
+    "unclosed-inline-formula": "Inline formula is missing a closing $",
+    "unclosed-link": "Link or image is missing a closing )",
+    "empty-destination": "Link or image destination is empty",
+    "empty-image-alt": "Image is missing alternative text",
+    "heading-space": "Add a space after the heading marker",
+    "raw-html-disabled": "Raw HTML is not enabled in this editor",
+    "fullwidth-heading-marker": "Use half-width # instead of full-width ＃",
+    "fullwidth-quote-marker": "Use half-width > instead of full-width ＞",
+    "fullwidth-code-fence": "Use half-width ``` instead of full-width ｀",
+    "fullwidth-list-marker": "Use half-width -, +, or * as the list marker",
+    "fullwidth-link-delimiter": "Use half-width []() for links and images",
+    "fullwidth-inline-code-marker": "Use half-width ` for inline code",
+    "fullwidth-formula-delimiter": "Use half-width $ for formulas",
+    "fullwidth-table-pipe": "Use half-width | as the table column separator",
+    "fullwidth-emphasis-marker": "Use half-width * for emphasis",
+    "task-list-spacing": "Task-list markers must be followed by a space",
+    "unclosed-task-checkbox": "Task-list checkbox is missing a closing ]",
+    "invalid-task-state": "Task state must be a space, x, or X",
+    "list-marker-spacing": "Add a space after the bullet-list marker",
+    "ordered-list-marker-spacing": "Add a space after the ordered-list marker",
+    "invalid-table-separator":
+      "Each table separator cell needs at least 3 - characters; : sets alignment",
+    "table-column-count":
+      "The header and separator rows have different column counts",
+    "invalid-fence-info":
+      "A backtick fence info string cannot contain backticks",
+    "unclosed-code-fence": "Code block is missing a closing fence",
+    "unclosed-block-formula": "Block formula is missing a closing $$",
+  };
+
+  if (diagnostic.code === "invalid-formula") {
+    return diagnostic.message.replace(/^LaTeX：/, "LaTeX: ");
+  }
+  if (diagnostic.code === "unknown-code-language") {
+    return `Unknown code language: ${diagnostic.message.split("：").at(-1)}`;
+  }
+  if (diagnostic.code === "heading-level-skip") {
+    const levels = diagnostic.message.match(/H(\d).*H(\d)/);
+    return levels
+      ? `Heading level jumps from H${levels[1]} to H${levels[2]}`
+      : "Heading level is skipped";
+  }
+  return messages[diagnostic.code] || diagnostic.message;
+}
+
+function applyLanguage(language) {
+  currentLanguage = translations[language] ? language : "zh-CN";
+  document.documentElement.lang = currentLanguage;
+  document.title = t("pageTitle");
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+    element.setAttribute("aria-label", t(element.dataset.i18nAriaLabel));
+  });
+  document.querySelectorAll("[data-i18n-tooltip]").forEach((element) => {
+    element.dataset.tooltip = t(element.dataset.i18nTooltip);
+  });
+  languageButtons.forEach((button) => {
+    const active = button.dataset.language === currentLanguage;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  applyTheme(document.documentElement.dataset.theme);
+  updateDocumentStats(editor.value);
+  updateCursorPosition();
+  updateDiagnostics(editor.value);
+  localStorage.setItem(storageKeys.language, currentLanguage);
+}
 
 function render() {
   const value = editor.value;
@@ -392,13 +609,27 @@ function getDiagnosticSummary(diagnostics) {
   const warningCount = diagnostics.length - errorCount;
 
   if (!diagnostics.length) {
-    return { errorCount, warningCount, text: "格式正常" };
+    return { errorCount, warningCount, text: t("formatNormal") };
   }
 
   const parts = [];
-  if (errorCount) parts.push(`${errorCount} 个错误`);
-  if (warningCount) parts.push(`${warningCount} 个警告`);
-  return { errorCount, warningCount, text: parts.join("，") };
+  if (errorCount)
+    parts.push(
+      currentLanguage === "en"
+        ? `${errorCount} ${errorCount === 1 ? "error" : "errors"}`
+        : `${errorCount} 个错误`,
+    );
+  if (warningCount)
+    parts.push(
+      currentLanguage === "en"
+        ? `${warningCount} ${warningCount === 1 ? "warning" : "warnings"}`
+        : `${warningCount} 个警告`,
+    );
+  return {
+    errorCount,
+    warningCount,
+    text: parts.join(currentLanguage === "en" ? ", " : "，"),
+  };
 }
 
 function updateDiagnostics(value) {
@@ -430,7 +661,7 @@ function updateDiagnostics(value) {
     location.className = "diagnostic-location";
     location.textContent = `Ln ${diagnostic.line}:${diagnostic.column}`;
     message.className = "diagnostic-message";
-    message.textContent = diagnostic.message;
+    message.textContent = localizeDiagnostic(diagnostic);
     button.append(location, message);
     item.append(button);
     fragment.append(item);
@@ -467,24 +698,33 @@ function updateDocumentStats(value) {
   const count = latinWords.length + cjkCharacters.length;
   const minutes = Math.max(1, Math.ceil(count / 300));
 
-  wordCount.textContent = `${count.toLocaleString()} 字`;
-  readTime.textContent = `约 ${minutes} 分钟阅读`;
+  wordCount.textContent =
+    currentLanguage === "en"
+      ? `${count.toLocaleString()} ${count === 1 ? "word" : "words"}`
+      : `${count.toLocaleString()} 字`;
+  readTime.textContent =
+    currentLanguage === "en"
+      ? `~${minutes} min read`
+      : `约 ${minutes} 分钟阅读`;
 }
 
 function updateCursorPosition() {
   const beforeCursor = editor.value.slice(0, editor.selectionStart);
   const lines = beforeCursor.split("\n");
-  cursorPosition.textContent = `Ln ${lines.length}, Col ${lines.at(-1).length + 1}`;
+  cursorPosition.textContent =
+    currentLanguage === "en"
+      ? `Ln ${lines.length}, Col ${lines.at(-1).length + 1}`
+      : `行 ${lines.length}，列 ${lines.at(-1).length + 1}`;
 }
 
 function queueSave() {
   saveState.classList.add("is-saving");
-  saveState.querySelector("span:last-child").textContent = "正在保存";
+  saveState.querySelector("span:last-child").textContent = t("saving");
   window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => {
     localStorage.setItem(storageKeys.content, editor.value);
     saveState.classList.remove("is-saving");
-    saveState.querySelector("span:last-child").textContent = "已自动保存";
+    saveState.querySelector("span:last-child").textContent = t("saved");
   }, 420);
 }
 
@@ -500,14 +740,17 @@ function countAdjacentCharacters(value, index, direction, character) {
   return count;
 }
 
-const inlineFormats = {
-  bold: { placeholder: "粗体文字" },
-  italic: { placeholder: "斜体文字" },
-  link: { placeholder: "链接文字" },
-  code: { placeholder: "code" },
-  formula: { placeholder: "E = mc^2" },
-  image: { placeholder: "墨刻 Markdown 示例图片" },
-};
+function getInlineFormat(action) {
+  const placeholders = {
+    bold: t("boldPlaceholder"),
+    italic: t("italicPlaceholder"),
+    link: t("linkPlaceholder"),
+    code: "code",
+    formula: "E = mc^2",
+    image: t("imagePlaceholder"),
+  };
+  return { placeholder: placeholders[action] };
+}
 
 const composableInlineFormats = new Set(["bold", "italic", "link"]);
 const exclusiveInlineFormats = new Set(["code", "formula", "image"]);
@@ -894,15 +1137,13 @@ function buildInlineReplacement(content, actions, existingLayers) {
 }
 
 function toggleInlineFormat(action) {
-  const format = inlineFormats[action];
+  const format = getInlineFormat(action);
   const start = editor.selectionStart;
   const end = editor.selectionEnd;
   const hasSelection = end > start;
 
   if (hasSelection && editor.value.slice(start, end).includes("\n")) {
-    showToast(
-      action === "code" ? "多行代码请使用代码块" : "行内格式不能跨越多行",
-    );
+    showToast(action === "code" ? t("multilineCode") : t("inlineNoMultiline"));
     return;
   }
 
@@ -974,7 +1215,7 @@ function toggleInlineFormat(action) {
     }
 
     if (action === "link" && containsInlineLink(selected)) {
-      showToast("链接不能嵌套");
+      showToast(t("nestedLinks"));
       return;
     }
 
@@ -996,7 +1237,11 @@ function toggleInlineFormat(action) {
   queueSave();
 }
 
-function insertMarkdown(before, after = "", placeholder = "文字") {
+function insertMarkdown(
+  before,
+  after = "",
+  placeholder = t("textPlaceholder"),
+) {
   const start = editor.selectionStart;
   const end = editor.selectionEnd;
   const hasSelection = end > start;
@@ -1065,14 +1310,18 @@ function getSelectedLineRange() {
   };
 }
 
-function toggleLinePrefix(action, placeholder = "列表项", options = {}) {
+function toggleLinePrefix(
+  action,
+  placeholder = t("listPlaceholder"),
+  options = {},
+) {
   const { lineStart, lineEnd, source } = getSelectedLineRange();
 
   if (
     (action === "bullet" || action === "ordered") &&
     containsCodeFence(source)
   ) {
-    showToast("代码块不能直接转换为列表");
+    showToast(t("codeList"));
     return;
   }
 
@@ -1244,7 +1493,7 @@ function applyTheme(theme) {
   document.documentElement.dataset.theme = resolvedTheme;
   themeButton.setAttribute(
     "aria-label",
-    resolvedTheme === "dark" ? "切换到浅色主题" : "切换到深色主题",
+    resolvedTheme === "dark" ? t("switchToLight") : t("switchToDark"),
   );
   themeButton.innerHTML = `<i data-lucide="${resolvedTheme === "dark" ? "sun" : "moon"}" aria-hidden="true"></i>`;
   localStorage.setItem(storageKeys.theme, resolvedTheme);
@@ -1274,7 +1523,7 @@ document.querySelector("#toolbar").addEventListener("click", (event) => {
     bullet: () => toggleLinePrefix("bullet"),
     ordered: () => toggleLinePrefix("ordered"),
     quote: () =>
-      toggleLinePrefix("quote", "引用内容", {
+      toggleLinePrefix("quote", t("quotePlaceholder"), {
         addQuoteLevel: event.shiftKey,
       }),
     formula: () => toggleInlineFormat("formula"),
@@ -1293,7 +1542,7 @@ editor.addEventListener("input", () => {
 
 formatStatus.addEventListener("click", () => {
   if (!currentDiagnostics.length) {
-    showToast("没有发现格式问题");
+    showToast(t("noFormatIssues"));
     return;
   }
 
@@ -1371,6 +1620,12 @@ modeButtons.forEach((button) => {
   button.addEventListener("click", () => setMode(button.dataset.mode));
 });
 
+languageButtons.forEach((button) => {
+  button.addEventListener("click", () =>
+    applyLanguage(button.dataset.language),
+  );
+});
+
 themeButton.addEventListener("click", () => {
   applyTheme(
     document.documentElement.dataset.theme === "dark" ? "light" : "dark",
@@ -1379,10 +1634,9 @@ themeButton.addEventListener("click", () => {
 
 newDocumentButton.addEventListener("click", () => {
   const hasContent = editor.value.trim() && editor.value !== starterDocument;
-  if (hasContent && !window.confirm("新建文稿会清空当前内容，确定继续吗？"))
-    return;
+  if (hasContent && !window.confirm(t("newDocumentConfirm"))) return;
 
-  editor.value = "# 未命名文稿\n\n从这里开始书写……\n";
+  editor.value = `# ${t("unnamedDocument")}\n\n${t("writeHere")}\n`;
   render();
   queueSave();
   editor.focus();
@@ -1403,7 +1657,7 @@ document.addEventListener("click", () => {
 
 document.querySelector("#copy-markdown").addEventListener("click", async () => {
   await navigator.clipboard.writeText(editor.value);
-  showToast("Markdown 已复制");
+  showToast(t("copySuccess"));
 });
 
 document.querySelector("#download-markdown").addEventListener("click", () => {
@@ -1416,7 +1670,7 @@ document.querySelector("#download-markdown").addEventListener("click", () => {
   link.download = "document.md";
   link.click();
   URL.revokeObjectURL(url);
-  showToast("文稿已下载");
+  showToast(t("downloadSuccess"));
 });
 
 resizer.addEventListener("pointerdown", (event) => {
@@ -1446,12 +1700,14 @@ const editorResizeObserver = new ResizeObserver(syncDiagnosticOverlay);
 editorResizeObserver.observe(editor);
 
 const storedTheme = localStorage.getItem(storageKeys.theme);
+const storedLanguage = localStorage.getItem(storageKeys.language);
 const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
   ? "dark"
   : "light";
 
 editor.value = localStorage.getItem(storageKeys.content) || starterDocument;
 setMode(localStorage.getItem(storageKeys.mode) || "split");
+applyLanguage(storedLanguage || "zh-CN");
 applyTheme(storedTheme || preferredTheme);
 resolveGithubRepository();
 render();

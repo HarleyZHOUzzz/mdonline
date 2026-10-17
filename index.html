@@ -29,14 +29,33 @@
           <span class="brand-product">Markdown</span>
         </div>
 
-        <nav class="view-switcher" aria-label="视图模式">
-          <button type="button" data-mode="edit" aria-pressed="false">
+        <nav
+          class="view-switcher"
+          aria-label="视图模式"
+          data-i18n-aria-label="viewMode"
+        >
+          <button
+            type="button"
+            data-mode="edit"
+            aria-pressed="false"
+            data-i18n="editOnly"
+          >
             仅编辑
           </button>
-          <button type="button" data-mode="split" aria-pressed="true">
+          <button
+            type="button"
+            data-mode="split"
+            aria-pressed="true"
+            data-i18n="splitView"
+          >
             分栏
           </button>
-          <button type="button" data-mode="preview" aria-pressed="false">
+          <button
+            type="button"
+            data-mode="preview"
+            aria-pressed="false"
+            data-i18n="previewOnly"
+          >
             仅预览
           </button>
         </nav>
@@ -44,14 +63,29 @@
         <div class="topbar-actions">
           <button class="new-document" id="new-document" type="button">
             <i data-lucide="file-plus-2" aria-hidden="true"></i>
-            <span>新建文稿</span>
+            <span data-i18n="newDocument">新建文稿</span>
           </button>
+          <div
+            class="language-switcher"
+            role="group"
+            aria-label="界面语言"
+            data-i18n-aria-label="language"
+          >
+            <button type="button" data-language="zh-CN" aria-pressed="true">
+              中
+            </button>
+            <button type="button" data-language="en" aria-pressed="false">
+              EN
+            </button>
+          </div>
           <button
             class="icon-button"
             id="theme-button"
             type="button"
             aria-label="切换到深色主题"
+            data-i18n-aria-label="switchToDark"
             data-tooltip="切换主题"
+            data-i18n-tooltip="switchTheme"
           >
             <i data-lucide="moon" aria-hidden="true"></i>
           </button>
@@ -62,30 +96,42 @@
             target="_blank"
             rel="noreferrer noopener"
             aria-label="打开 GitHub 仓库"
+            data-i18n-aria-label="openGithub"
             data-tooltip="GitHub"
           >
             <i data-lucide="git-fork" aria-hidden="true"></i>
           </a>
           <div class="save-state" id="save-state" aria-live="polite">
             <span class="save-dot" aria-hidden="true"></span>
-            <span>已自动保存</span>
+            <span data-i18n="saved">已自动保存</span>
           </div>
         </div>
       </header>
 
       <main class="workspace" id="workspace" data-mode="split">
-        <section class="pane editor-pane" aria-label="Markdown 编辑区">
+        <section
+          class="pane editor-pane"
+          aria-label="Markdown 编辑区"
+          data-i18n-aria-label="editorArea"
+        >
           <div class="pane-header">
             <div class="pane-title">
               <i data-lucide="pencil-line" aria-hidden="true"></i>
-              <span>编辑器</span>
+              <span data-i18n="editor">编辑器</span>
             </div>
-            <div class="toolbar" id="toolbar" aria-label="Markdown 格式工具栏">
+            <div
+              class="toolbar"
+              id="toolbar"
+              aria-label="Markdown 格式工具栏"
+              data-i18n-aria-label="formatToolbar"
+            >
               <button
                 type="button"
                 data-action="bold"
                 aria-label="粗体"
+                data-i18n-aria-label="bold"
                 data-tooltip="粗体 ⌘B"
+                data-i18n-tooltip="boldShortcut"
               >
                 <i data-lucide="bold" aria-hidden="true"></i>
               </button>
@@ -93,7 +139,9 @@
                 type="button"
                 data-action="italic"
                 aria-label="斜体"
+                data-i18n-aria-label="italic"
                 data-tooltip="斜体 ⌘I"
+                data-i18n-tooltip="italicShortcut"
               >
                 <i data-lucide="italic" aria-hidden="true"></i>
               </button>
@@ -101,7 +149,9 @@
                 type="button"
                 data-action="link"
                 aria-label="链接"
+                data-i18n-aria-label="link"
                 data-tooltip="链接 ⌘K"
+                data-i18n-tooltip="linkShortcut"
               >
                 <i data-lucide="link-2" aria-hidden="true"></i>
               </button>
@@ -109,7 +159,9 @@
                 type="button"
                 data-action="code"
                 aria-label="行内代码"
+                data-i18n-aria-label="inlineCode"
                 data-tooltip="行内代码"
+                data-i18n-tooltip="inlineCode"
               >
                 <i data-lucide="code-2" aria-hidden="true"></i>
               </button>
@@ -117,7 +169,9 @@
                 type="button"
                 data-action="codeblock"
                 aria-label="代码块"
+                data-i18n-aria-label="codeBlock"
                 data-tooltip="代码块"
+                data-i18n-tooltip="codeBlock"
               >
                 <i data-lucide="square-code" aria-hidden="true"></i>
               </button>
@@ -125,7 +179,9 @@
                 type="button"
                 data-action="bullet"
                 aria-label="无序列表"
+                data-i18n-aria-label="bulletList"
                 data-tooltip="无序列表"
+                data-i18n-tooltip="bulletList"
               >
                 <i data-lucide="list" aria-hidden="true"></i>
               </button>
@@ -133,7 +189,9 @@
                 type="button"
                 data-action="ordered"
                 aria-label="有序列表"
+                data-i18n-aria-label="orderedList"
                 data-tooltip="有序列表"
+                data-i18n-tooltip="orderedList"
               >
                 <i data-lucide="list-ordered" aria-hidden="true"></i>
               </button>
@@ -141,7 +199,9 @@
                 type="button"
                 data-action="quote"
                 aria-label="引用"
+                data-i18n-aria-label="quote"
                 data-tooltip="引用（Shift 点击增加层级）"
+                data-i18n-tooltip="quoteTooltip"
               >
                 <i data-lucide="quote" aria-hidden="true"></i>
               </button>
@@ -149,7 +209,9 @@
                 type="button"
                 data-action="formula"
                 aria-label="公式"
+                data-i18n-aria-label="formula"
                 data-tooltip="LaTeX 公式"
+                data-i18n-tooltip="latexFormula"
               >
                 <i data-lucide="sigma" aria-hidden="true"></i>
               </button>
@@ -157,7 +219,9 @@
                 type="button"
                 data-action="image"
                 aria-label="图片"
+                data-i18n-aria-label="image"
                 data-tooltip="图片"
+                data-i18n-tooltip="image"
               >
                 <i data-lucide="image" aria-hidden="true"></i>
               </button>
@@ -167,20 +231,22 @@
                   id="more-button"
                   type="button"
                   aria-label="更多操作"
+                  data-i18n-aria-label="moreActions"
                   aria-expanded="false"
                   aria-controls="more-menu"
                   data-tooltip="更多"
+                  data-i18n-tooltip="more"
                 >
                   <i data-lucide="more-horizontal" aria-hidden="true"></i>
                 </button>
                 <div class="more-menu" id="more-menu" hidden>
                   <button id="copy-markdown" type="button">
                     <i data-lucide="copy" aria-hidden="true"></i>
-                    复制 Markdown
+                    <span data-i18n="copyMarkdown">复制 Markdown</span>
                   </button>
                   <button id="download-markdown" type="button">
                     <i data-lucide="download" aria-hidden="true"></i>
-                    下载 .md
+                    <span data-i18n="downloadMarkdown">下载 .md</span>
                   </button>
                 </div>
               </div>
@@ -199,6 +265,7 @@
               <textarea
                 id="editor"
                 aria-label="Markdown 文本编辑器"
+                data-i18n-aria-label="markdownEditor"
                 spellcheck="false"
               ></textarea>
             </div>
@@ -207,17 +274,19 @@
             class="diagnostics-panel"
             id="diagnostics-panel"
             aria-label="格式检查结果"
+            data-i18n-aria-label="diagnosticResults"
             hidden
           >
             <div class="diagnostics-header">
               <div>
-                <strong>格式检查</strong>
+                <strong data-i18n="formatCheck">格式检查</strong>
                 <span id="diagnostics-summary"></span>
               </div>
               <button
                 id="diagnostics-close"
                 type="button"
                 aria-label="关闭格式检查面板"
+                data-i18n-aria-label="closeDiagnostics"
               >
                 &times;
               </button>
@@ -238,7 +307,7 @@
               <span id="format-summary">格式正常</span>
             </button>
             <span class="status-spacer"></span>
-            <span>空格：2</span>
+            <span data-i18n="spaces">空格：2</span>
             <span class="status-separator" aria-hidden="true">·</span>
             <span>UTF-8</span>
             <span class="status-separator" aria-hidden="true">·</span>
@@ -251,19 +320,25 @@
           id="resizer"
           role="separator"
           aria-label="拖动调整编辑区和预览区宽度"
+          data-i18n-aria-label="resizePanes"
           aria-orientation="vertical"
         >
           <span aria-hidden="true"></span>
         </div>
 
-        <section class="pane preview-pane" aria-label="Markdown 预览区">
+        <section
+          class="pane preview-pane"
+          aria-label="Markdown 预览区"
+          data-i18n-aria-label="previewArea"
+        >
           <div class="pane-header preview-header">
             <div class="pane-title">
               <i data-lucide="eye" aria-hidden="true"></i>
-              <span>预览</span>
+              <span data-i18n="preview">预览</span>
             </div>
             <span class="live-label"
-              ><span aria-hidden="true"></span>实时渲染</span
+              ><span aria-hidden="true"></span
+              ><span data-i18n="livePreview">实时渲染</span></span
             >
           </div>
           <article class="preview-content" id="preview"></article>
