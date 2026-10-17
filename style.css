@@ -681,30 +681,48 @@ button {
   background: color-mix(in srgb, var(--ink) 15%, transparent);
 }
 
+#editor,
+.preview-content {
+  scrollbar-color: var(--line-strong) var(--canvas);
+  scrollbar-width: thin;
+}
+
+#editor::-webkit-scrollbar,
+.preview-content::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+#editor::-webkit-scrollbar-track,
+.preview-content::-webkit-scrollbar-track {
+  background: var(--canvas);
+}
+
+#editor::-webkit-scrollbar-thumb,
+.preview-content::-webkit-scrollbar-thumb {
+  border: 3px solid var(--canvas);
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+
+#editor::-webkit-scrollbar-thumb:hover,
+.preview-content::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-faint);
+}
+
 .resizer {
   position: relative;
   z-index: 3;
   display: grid;
   cursor: col-resize;
   place-items: center;
-  border-right: 0;
-  border-left: 0;
-  background: var(--paper);
+  border-right: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  background: var(--canvas);
   touch-action: none;
   transition:
     opacity 160ms ease,
     border-color 160ms ease;
-}
-
-.resizer::before {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 1px;
-  background: color-mix(in srgb, var(--line) 52%, transparent);
-  content: "";
-  transform: translateX(-50%);
 }
 
 .resizer span {
