@@ -53,3 +53,11 @@ test("accepts formulas in image text and Markdown autolinks", () => {
 
   assert.deepEqual(diagnostics, []);
 });
+
+test("reports the absolute column inside nested quotes", () => {
+  const diagnostics = lint("> > Formula: $\\frac{$");
+  const formula = diagnostics.find((item) => item.code === "invalid-formula");
+
+  assert.equal(formula.column, 14);
+  assert.ok(formula.length > 1);
+});

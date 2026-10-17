@@ -158,6 +158,12 @@ const storageKeys = {
 const editor = document.querySelector("#editor");
 const lineNumbersInner = document.querySelector("#line-numbers-inner");
 const editorPane = document.querySelector(".editor-pane");
+const diagnosticsOverlay = document.querySelector(
+  "#editor-diagnostics-overlay",
+);
+const diagnosticsContent = document.querySelector(
+  "#editor-diagnostics-content",
+);
 const preview = document.querySelector("#preview");
 const workspace = document.querySelector("#workspace");
 const saveState = document.querySelector("#save-state");
@@ -260,6 +266,90 @@ function updateLineNumbers() {
 
 function syncLineNumbers() {
   lineNumbersInner.style.transform = `translate3d(0, ${-editor.scrollTop}px, 0)`;
+  syncDiagnosticOverlay();
+}
+
+function syncDiagnosticOverlay() {
+  diagnosticsOverlay.style.width = `${editor.clientWidth}px`;
+  diagnosticsContent.style.transform = `translate3d(${-editor.scrollLeft}px, ${-editor.scrollTop}px, 0)`;
+}
+
+function appendDiagnosticRun(fragment, text, severity) {
+  if (!severity) {
+    fragment.append(document.createTextNode(text));
+    return;
+  }
+
+  const marker = document.createElement("span");
+  marker.className = `diagnostic-squiggle is-${severity}`;
+  marker.textContent = text;
+  fragment.append(marker);
+}
+
+function renderDiagnosticLine(fragment, line, diagnostics) {
+  if (!line.length) {
+    if (diagnostics.length) {
+      appendDiagnosticRun(fragment, "\u200b", diagnostics[0].severity);
+    }
+    return;
+  }
+
+  const severities = Array(line.length).fill(null);
+  for (const diagnostic of diagnostics) {
+    const start = Math.min(line.length - 1, Math.max(0, diagnostic.column - 1));
+    const end = Math.min(
+      line.length,
+      start + Math.max(1, diagnostic.length || 1),
+    );
+
+    for (let index = start; index < end; index += 1) {
+      if (diagnostic.severity === "error" || !severities[index]) {
+        severities[index] = diagnostic.severity;
+      }
+    }
+  }
+
+  let runStart = 0;
+  for (let index = 1; index <= line.length; index += 1) {
+    if (index < line.length && severities[index] === severities[runStart]) {
+      continue;
+    }
+    appendDiagnosticRun(
+      fragment,
+      line.slice(runStart, index),
+      severities[runStart],
+    );
+    runStart = index;
+  }
+}
+
+function renderDiagnosticOverlay(value) {
+  diagnosticsOverlay.hidden = currentDiagnostics.length === 0;
+  if (!currentDiagnostics.length) {
+    diagnosticsContent.replaceChildren();
+    return;
+  }
+
+  const diagnosticsByLine = new Map();
+  for (const diagnostic of currentDiagnostics) {
+    const lineDiagnostics = diagnosticsByLine.get(diagnostic.line) || [];
+    lineDiagnostics.push(diagnostic);
+    diagnosticsByLine.set(diagnostic.line, lineDiagnostics);
+  }
+
+  const fragment = document.createDocumentFragment();
+  const lines = value.split("\n");
+  lines.forEach((line, index) => {
+    renderDiagnosticLine(
+      fragment,
+      line,
+      diagnosticsByLine.get(index + 1) || [],
+    );
+    if (index < lines.length - 1)
+      fragment.append(document.createTextNode("\n"));
+  });
+  diagnosticsContent.replaceChildren(fragment);
+  syncDiagnosticOverlay();
 }
 
 function updateLineNumberDiagnostics() {
@@ -347,6 +437,7 @@ function updateDiagnostics(value) {
   });
   diagnosticsList.replaceChildren(fragment);
   updateLineNumberDiagnostics();
+  renderDiagnosticOverlay(value);
 
   if (!currentDiagnostics.length) setDiagnosticsPanel(false);
 }
@@ -1350,6 +1441,9 @@ resizer.addEventListener("pointerup", (event) => {
   resizer.releasePointerCapture(event.pointerId);
   document.body.classList.remove("is-resizing");
 });
+
+const editorResizeObserver = new ResizeObserver(syncDiagnosticOverlay);
+editorResizeObserver.observe(editor);
 
 const storedTheme = localStorage.getItem(storageKeys.theme);
 const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches

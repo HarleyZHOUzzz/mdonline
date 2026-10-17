@@ -479,6 +479,7 @@ button {
 }
 
 .line-numbers-inner span {
+  position: relative;
   display: block;
   height: 2.1233333333em;
 }
@@ -486,20 +487,114 @@ button {
 .line-numbers-inner span.has-error {
   color: var(--error);
   font-weight: 700;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--error) 11%, transparent),
+    transparent 72%
+  );
 }
 
 .line-numbers-inner span.has-warning {
   color: var(--warning);
   font-weight: 700;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--warning) 11%, transparent),
+    transparent 72%
+  );
+}
+
+.line-numbers-inner span.has-error::before,
+.line-numbers-inner span.has-warning::before {
+  position: absolute;
+  top: 50%;
+  left: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  content: "";
+  transform: translateY(-50%);
+}
+
+.line-numbers-inner span.has-error::before {
+  background: var(--error);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--error) 15%, transparent);
+}
+
+.line-numbers-inner span.has-warning::before {
+  background: var(--warning);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning) 15%, transparent);
+}
+
+.editor-input {
+  --editor-padding-block-start: 31px;
+  --editor-padding-block-end: 72px;
+  --editor-padding-inline: clamp(24px, 4vw, 58px);
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.editor-diagnostics-overlay {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: transparent;
+  background: transparent;
+  pointer-events: none;
+}
+
+.editor-diagnostics-overlay code {
+  display: block;
+  width: 100%;
+  min-height: 100%;
+  padding: var(--editor-padding-block-start) var(--editor-padding-inline)
+    var(--editor-padding-block-end);
+  color: transparent;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.82;
+  overflow-wrap: break-word;
+  tab-size: 2;
+  white-space: pre-wrap;
+  will-change: transform;
+}
+
+.diagnostic-squiggle {
+  border-radius: 2px;
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+}
+
+.diagnostic-squiggle.is-error {
+  background: color-mix(in srgb, var(--error) 9%, transparent);
+  text-decoration-color: var(--error);
+}
+
+.diagnostic-squiggle.is-warning {
+  background: color-mix(in srgb, var(--warning) 9%, transparent);
+  text-decoration-color: var(--warning);
 }
 
 #editor {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
   width: 100%;
   height: 100%;
   min-width: 0;
   min-height: 0;
   resize: none;
-  padding: 31px clamp(24px, 4vw, 58px) 72px;
+  padding: var(--editor-padding-block-start) var(--editor-padding-inline)
+    var(--editor-padding-block-end);
   border: 0;
   border-radius: 0;
   outline: 0;
@@ -1064,7 +1159,12 @@ button {
     padding: 22px 9px 56px 0;
   }
 
-  #editor,
+  .editor-input {
+    --editor-padding-block-start: 22px;
+    --editor-padding-block-end: 56px;
+    --editor-padding-inline: 20px;
+  }
+
   .preview-content {
     padding: 22px 20px 56px;
   }

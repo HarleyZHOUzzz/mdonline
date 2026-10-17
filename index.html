@@ -190,11 +190,18 @@
             <div class="line-numbers" id="line-numbers" aria-hidden="true">
               <div class="line-numbers-inner" id="line-numbers-inner"></div>
             </div>
-            <textarea
-              id="editor"
-              aria-label="Markdown 文本编辑器"
-              spellcheck="false"
-            ></textarea>
+            <div class="editor-input">
+              <pre
+                class="editor-diagnostics-overlay"
+                id="editor-diagnostics-overlay"
+                aria-hidden="true"
+              ><code id="editor-diagnostics-content"></code></pre>
+              <textarea
+                id="editor"
+                aria-label="Markdown 文本编辑器"
+                spellcheck="false"
+              ></textarea>
+            </div>
           </div>
           <section
             class="diagnostics-panel"

@@ -1,7 +1,7 @@
 import katex from "katex";
 
-function createDiagnostic(line, column, severity, code, message) {
-  return { line, column, severity, code, message };
+function createDiagnostic(line, column, severity, code, message, length = 1) {
+  return { line, column, severity, code, message, length };
 }
 
 function isEscaped(value, index) {
@@ -28,7 +28,7 @@ function stripContainerPrefix(line) {
     quote = content.match(/^>[ \t]?/);
   }
 
-  return { content, quoteDepth };
+  return { content, offset: line.length - content.length, quoteDepth };
 }
 
 function findClosingRun(value, start, marker, length) {
@@ -47,7 +47,7 @@ function findClosingRun(value, start, marker, length) {
   return -1;
 }
 
-function maskInlineCode(line, lineNumber, diagnostics) {
+function maskInlineCode(line, lineNumber, diagnostics, columnOffset) {
   const characters = [...line];
   let cursor = 0;
 
@@ -65,10 +65,11 @@ function maskInlineCode(line, lineNumber, diagnostics) {
       diagnostics.push(
         createDiagnostic(
           lineNumber,
-          cursor + 1,
+          cursor + columnOffset + 1,
           "warning",
           "unclosed-inline-code",
           "行内代码缺少闭合反引号",
+          runLength,
         ),
       );
       break;
@@ -91,6 +92,8 @@ function formatKatexError(error) {
 }
 
 function validateFormula(expression, line, column, displayMode, diagnostics) {
+  const delimiterLength = displayMode ? 4 : 2;
+  const diagnosticLength = Math.max(1, expression.length + delimiterLength);
   if (!expression.trim()) {
     diagnostics.push(
       createDiagnostic(
@@ -99,6 +102,7 @@ function validateFormula(expression, line, column, displayMode, diagnostics) {
         "warning",
         "empty-formula",
         "公式内容为空",
+        diagnosticLength,
       ),
     );
     return;
@@ -119,12 +123,13 @@ function validateFormula(expression, line, column, displayMode, diagnostics) {
         "error",
         "invalid-formula",
         `LaTeX：${formatKatexError(error)}`,
+        diagnosticLength,
       ),
     );
   }
 }
 
-function maskInlineMath(line, lineNumber, diagnostics) {
+function maskInlineMath(line, lineNumber, diagnostics, columnOffset) {
   const characters = [...line];
   let cursor = 0;
 
@@ -146,10 +151,11 @@ function maskInlineMath(line, lineNumber, diagnostics) {
         diagnostics.push(
           createDiagnostic(
             lineNumber,
-            cursor + 1,
+            cursor + columnOffset + 1,
             "warning",
             "unclosed-inline-formula",
             "行内公式缺少闭合的 $",
+            Math.max(1, line.length - cursor),
           ),
         );
       }
@@ -159,7 +165,7 @@ function maskInlineMath(line, lineNumber, diagnostics) {
     validateFormula(
       line.slice(cursor + 1, closing),
       lineNumber,
-      cursor + 1,
+      cursor + columnOffset + 1,
       false,
       diagnostics,
     );
@@ -188,7 +194,7 @@ function findClosingParenthesis(value, start) {
   return -1;
 }
 
-function lintLinks(line, lineNumber, diagnostics) {
+function lintLinks(line, lineNumber, diagnostics, columnOffset) {
   const linkPattern = /(!?)\[([^\]]*)\]\(/g;
   let match = linkPattern.exec(line);
 
@@ -199,10 +205,11 @@ function lintLinks(line, lineNumber, diagnostics) {
       diagnostics.push(
         createDiagnostic(
           lineNumber,
-          match.index + 1,
+          match.index + columnOffset + 1,
           "error",
           "unclosed-link",
           `${match[1] ? "图片" : "链接"}缺少闭合的 )`,
+          Math.max(1, line.length - match.index),
         ),
       );
       break;
@@ -213,10 +220,11 @@ function lintLinks(line, lineNumber, diagnostics) {
       diagnostics.push(
         createDiagnostic(
           lineNumber,
-          destinationStart + 1,
+          destinationStart + columnOffset + 1,
           "warning",
           "empty-destination",
           `${match[1] ? "图片" : "链接"}地址为空`,
+          2,
         ),
       );
     }
@@ -224,10 +232,11 @@ function lintLinks(line, lineNumber, diagnostics) {
       diagnostics.push(
         createDiagnostic(
           lineNumber,
-          match.index + 1,
+          match.index + columnOffset + 1,
           "warning",
           "empty-image-alt",
           "图片缺少替代文字",
+          Math.max(2, match[0].length),
         ),
       );
     }
@@ -237,15 +246,17 @@ function lintLinks(line, lineNumber, diagnostics) {
   }
 }
 
-function lintVisibleLine(line, lineNumber, diagnostics) {
-  if (/^ {0,3}#{1,6}[^#\s]/.test(line)) {
+function lintVisibleLine(line, lineNumber, diagnostics, columnOffset) {
+  const heading = line.match(/^ {0,3}(#{1,6})[^#\s]/);
+  if (heading) {
     diagnostics.push(
       createDiagnostic(
         lineNumber,
-        line.indexOf("#") + 1,
+        line.indexOf("#") + columnOffset + 1,
         "warning",
         "heading-space",
         "标题标记后应添加空格",
+        heading[1].length + 1,
       ),
     );
   }
@@ -255,10 +266,11 @@ function lintVisibleLine(line, lineNumber, diagnostics) {
     diagnostics.push(
       createDiagnostic(
         lineNumber,
-        htmlTag.index + 1,
+        htmlTag.index + columnOffset + 1,
         "warning",
         "raw-html-disabled",
         "当前编辑器未启用原始 HTML",
+        htmlTag[0].length,
       ),
     );
   }
@@ -294,6 +306,7 @@ function collectFenceLines(lines, diagnostics, isKnownLanguage) {
             "error",
             "invalid-fence-info",
             "反引号代码围栏的语言标记中不能包含反引号",
+            marker.length + info.length,
           ),
         );
       } else if (language && !isKnownLanguage(language)) {
@@ -304,6 +317,7 @@ function collectFenceLines(lines, diagnostics, isKnownLanguage) {
             "warning",
             "unknown-code-language",
             `未知的代码类型：${language}`,
+            language.length,
           ),
         );
       }
@@ -332,6 +346,7 @@ function collectFenceLines(lines, diagnostics, isKnownLanguage) {
         "error",
         "unclosed-code-fence",
         "代码块缺少闭合围栏",
+        fence.length,
       ),
     );
   }
@@ -346,8 +361,13 @@ function lintMath(lines, fencedLines, diagnostics) {
     const lineNumber = index + 1;
     if (fencedLines.has(lineNumber)) return;
 
-    const { content } = stripContainerPrefix(line);
-    const inlineCodeMasked = maskInlineCode(content, lineNumber, diagnostics);
+    const { content, offset } = stripContainerPrefix(line);
+    const inlineCodeMasked = maskInlineCode(
+      content,
+      lineNumber,
+      diagnostics,
+      offset,
+    );
 
     if (block) {
       const closing = inlineCodeMasked.indexOf("$$");
@@ -369,7 +389,7 @@ function lintMath(lines, fencedLines, diagnostics) {
 
     const blockOpening = inlineCodeMasked.match(/^\s{0,3}\$\$(.*)$/);
     if (blockOpening) {
-      const column = inlineCodeMasked.indexOf("$$") + 1;
+      const column = inlineCodeMasked.indexOf("$$") + offset + 1;
       const remainder = blockOpening[1];
       const closing = remainder.indexOf("$$");
       if (closing >= 0 && !isEscaped(remainder, closing)) {
@@ -386,13 +406,14 @@ function lintMath(lines, fencedLines, diagnostics) {
       return;
     }
 
-    lintLinks(inlineCodeMasked, lineNumber, diagnostics);
+    lintLinks(inlineCodeMasked, lineNumber, diagnostics, offset);
     const mathMasked = maskInlineMath(
       inlineCodeMasked,
       lineNumber,
       diagnostics,
+      offset,
     );
-    lintVisibleLine(mathMasked, lineNumber, diagnostics);
+    lintVisibleLine(mathMasked, lineNumber, diagnostics, offset);
   });
 
   if (block) {
@@ -403,6 +424,7 @@ function lintMath(lines, fencedLines, diagnostics) {
         "error",
         "unclosed-block-formula",
         "块级公式缺少闭合的 $$",
+        2,
       ),
     );
   }
