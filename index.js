@@ -36,6 +36,7 @@ import {
   PencilLine,
   Quote,
   Sigma,
+  SquareCode,
   Sun,
 } from "lucide";
 import MarkdownIt from "markdown-it";
@@ -96,6 +97,7 @@ const appIcons = {
   PencilLine,
   Quote,
   Sigma,
+  SquareCode,
   Sun,
 };
 
@@ -688,6 +690,13 @@ function toggleInlineFormat(action) {
   const end = editor.selectionEnd;
   const hasSelection = end > start;
 
+  if (hasSelection && editor.value.slice(start, end).includes("\n")) {
+    showToast(
+      action === "code" ? "多行代码请使用代码块" : "行内格式不能跨越多行",
+    );
+    return;
+  }
+
   if (!hasSelection) {
     const selected = format.placeholder;
     const { replacement, selectionOffset } = buildInlineReplacement(
@@ -826,7 +835,7 @@ function parseLinePrefixes(line) {
   return { indent, layers, content };
 }
 
-function toggleLinePrefix(action, placeholder = "列表项") {
+function getSelectedLineRange() {
   const start = editor.selectionStart;
   const end = editor.selectionEnd;
   const lineStart = editor.value.lastIndexOf("\n", start - 1) + 1;
@@ -839,7 +848,25 @@ function toggleLinePrefix(action, placeholder = "列表项") {
     : nextLineBreak === -1
       ? editor.value.length
       : nextLineBreak;
-  const source = editor.value.slice(lineStart, lineEnd);
+
+  return {
+    lineStart,
+    lineEnd,
+    source: editor.value.slice(lineStart, lineEnd),
+  };
+}
+
+function toggleLinePrefix(action, placeholder = "列表项", options = {}) {
+  const { lineStart, lineEnd, source } = getSelectedLineRange();
+
+  if (
+    (action === "bullet" || action === "ordered") &&
+    containsCodeFence(source)
+  ) {
+    showToast("代码块不能直接转换为列表");
+    return;
+  }
+
   const selection = source || placeholder;
   const parsedLines = selection.split("\n").map(parseLinePrefixes);
   const nonemptyLines = parsedLines.filter(
@@ -853,11 +880,22 @@ function toggleLinePrefix(action, placeholder = "列表项") {
   let orderedIndex = 1;
   const replacement = parsedLines
     .map(({ indent, layers: collectedLayers, content }) => {
+      let quoteDepth = collectedLayers.filter(
+        (layer) => layer.action === "quote",
+      ).length;
       const activeActions = new Set(
-        collectedLayers.map((layer) => layer.action),
+        collectedLayers
+          .filter((layer) => layer.action !== "quote")
+          .map((layer) => layer.action),
       );
 
-      if (isActive) {
+      if (action === "quote") {
+        if (options.addQuoteLevel || !isActive) {
+          quoteDepth += 1;
+        } else {
+          quoteDepth = Math.max(0, quoteDepth - 1);
+        }
+      } else if (isActive) {
         activeActions.delete(action);
       } else if (action === "bullet" || action === "ordered") {
         activeActions.delete("bullet");
@@ -867,7 +905,7 @@ function toggleLinePrefix(action, placeholder = "列表项") {
         activeActions.add(action);
       }
 
-      const quoteMarker = activeActions.has("quote") ? "> " : "";
+      const quoteMarker = "> ".repeat(quoteDepth);
       let listMarker = "";
 
       if (activeActions.has("bullet")) {
@@ -880,6 +918,82 @@ function toggleLinePrefix(action, placeholder = "列表项") {
       return `${indent}${quoteMarker}${listMarker}${content}`;
     })
     .join("\n");
+
+  editor.setRangeText(replacement, lineStart, lineEnd, "select");
+  editor.focus();
+  render();
+  updateCursorPosition();
+  queueSave();
+}
+
+function parseBlockQuotePrefix(line) {
+  const indent = line.match(/^ {0,3}/)?.[0] || "";
+  let content = line.slice(indent.length);
+  let quoteDepth = 0;
+  let match = content.match(/^>[ \t]?/);
+
+  while (match) {
+    quoteDepth += 1;
+    content = content.slice(match[0].length);
+    match = content.match(/^>[ \t]?/);
+  }
+
+  return {
+    content,
+    indent,
+    prefix: `${indent}${"> ".repeat(quoteDepth)}`,
+    quoteDepth,
+  };
+}
+
+function containsCodeFence(value) {
+  return value
+    .split("\n")
+    .some((line) => /^(`{3,}|~{3,})/.test(parseBlockQuotePrefix(line).content));
+}
+
+function toggleCodeBlock() {
+  const { lineStart, lineEnd, source } = getSelectedLineRange();
+  const selection = source || "code";
+  const lines = selection.split("\n");
+  const firstLine = parseBlockQuotePrefix(lines[0]);
+  const lastLine = parseBlockQuotePrefix(lines.at(-1));
+  const openingFence = firstLine.content.match(/^(`{3,}|~{3,})(.*)$/);
+  const closingFence = lastLine.content.match(/^(`{3,}|~{3,})[ \t]*$/);
+  const isFenced =
+    lines.length >= 2 &&
+    openingFence &&
+    closingFence &&
+    firstLine.prefix === lastLine.prefix &&
+    openingFence[1][0] === closingFence[1][0] &&
+    closingFence[1].length >= openingFence[1].length;
+
+  if (isFenced) {
+    const replacement = lines.slice(1, -1).join("\n");
+    editor.setRangeText(replacement, lineStart, lineEnd, "select");
+    editor.focus();
+    render();
+    updateCursorPosition();
+    queueSave();
+    return;
+  }
+
+  const parsedLines = lines.map(parseBlockQuotePrefix);
+  const commonQuoteDepth = Math.min(
+    ...parsedLines.map(({ quoteDepth }) => quoteDepth),
+  );
+  const commonIndent = parsedLines.every(
+    ({ indent }) => indent === parsedLines[0].indent,
+  )
+    ? parsedLines[0].indent
+    : "";
+  const prefix = `${commonIndent}${"> ".repeat(commonQuoteDepth)}`;
+  const longestBacktickRun = Math.max(
+    0,
+    ...(selection.match(/`+/g) || []).map((run) => run.length),
+  );
+  const fence = "`".repeat(Math.max(3, longestBacktickRun + 1));
+  const replacement = `${prefix}${fence}\n${selection}\n${prefix}${fence}`;
 
   editor.setRangeText(replacement, lineStart, lineEnd, "select");
   editor.focus();
@@ -947,9 +1061,13 @@ document.querySelector("#toolbar").addEventListener("click", (event) => {
     italic: () => toggleInlineFormat("italic"),
     link: () => toggleInlineFormat("link"),
     code: () => toggleInlineFormat("code"),
+    codeblock: () => toggleCodeBlock(),
     bullet: () => toggleLinePrefix("bullet"),
     ordered: () => toggleLinePrefix("ordered"),
-    quote: () => toggleLinePrefix("quote", "引用内容"),
+    quote: () =>
+      toggleLinePrefix("quote", "引用内容", {
+        addQuoteLevel: event.shiftKey,
+      }),
     formula: () => toggleInlineFormat("formula"),
     image: () => toggleInlineFormat("image"),
   };
