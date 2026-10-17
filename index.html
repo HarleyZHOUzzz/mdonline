@@ -196,8 +196,40 @@
               spellcheck="false"
             ></textarea>
           </div>
+          <section
+            class="diagnostics-panel"
+            id="diagnostics-panel"
+            aria-label="格式检查结果"
+            hidden
+          >
+            <div class="diagnostics-header">
+              <div>
+                <strong>格式检查</strong>
+                <span id="diagnostics-summary"></span>
+              </div>
+              <button
+                id="diagnostics-close"
+                type="button"
+                aria-label="关闭格式检查面板"
+              >
+                &times;
+              </button>
+            </div>
+            <ol class="diagnostics-list" id="diagnostics-list"></ol>
+          </section>
           <footer class="pane-status">
             <span id="cursor-position">Ln 1, Col 1</span>
+            <span class="status-separator" aria-hidden="true">·</span>
+            <button
+              class="format-status"
+              id="format-status"
+              type="button"
+              aria-expanded="false"
+              aria-controls="diagnostics-panel"
+            >
+              <span class="format-status-dot" aria-hidden="true"></span>
+              <span id="format-summary">格式正常</span>
+            </button>
             <span class="status-spacer"></span>
             <span>空格：2</span>
             <span class="status-separator" aria-hidden="true">·</span>

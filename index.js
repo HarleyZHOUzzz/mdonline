@@ -42,6 +42,7 @@ import {
 import MarkdownIt from "markdown-it";
 import markdownItTaskLists from "markdown-it-task-lists";
 
+import { lintMarkdown } from "./markdown-linter.js";
 import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
 import "./style.css";
@@ -156,6 +157,7 @@ const storageKeys = {
 
 const editor = document.querySelector("#editor");
 const lineNumbersInner = document.querySelector("#line-numbers-inner");
+const editorPane = document.querySelector(".editor-pane");
 const preview = document.querySelector("#preview");
 const workspace = document.querySelector("#workspace");
 const saveState = document.querySelector("#save-state");
@@ -170,12 +172,19 @@ const moreButton = document.querySelector("#more-button");
 const moreMenu = document.querySelector("#more-menu");
 const githubLink = document.querySelector("#github-link");
 const toast = document.querySelector("#toast");
+const diagnosticsPanel = document.querySelector("#diagnostics-panel");
+const diagnosticsSummary = document.querySelector("#diagnostics-summary");
+const diagnosticsList = document.querySelector("#diagnostics-list");
+const diagnosticsClose = document.querySelector("#diagnostics-close");
+const formatStatus = document.querySelector("#format-status");
+const formatSummary = document.querySelector("#format-summary");
 
 let saveTimer;
 let toastTimer;
 let dragging = false;
 let syncingScroll = false;
 let renderedLineCount = 0;
+let currentDiagnostics = [];
 
 const md = new MarkdownIt({
   breaks: true,
@@ -229,6 +238,7 @@ function render() {
   preview.innerHTML = md.render(value);
   updateDocumentStats(value);
   updateLineNumbers();
+  updateDiagnostics(value);
 }
 
 function updateLineNumbers() {
@@ -250,6 +260,114 @@ function updateLineNumbers() {
 
 function syncLineNumbers() {
   lineNumbersInner.style.transform = `translate3d(0, ${-editor.scrollTop}px, 0)`;
+}
+
+function updateLineNumberDiagnostics() {
+  const lineNumbers = [...lineNumbersInner.children];
+  const diagnosticsByLine = new Map();
+
+  for (const diagnostic of currentDiagnostics) {
+    const lineDiagnostics = diagnosticsByLine.get(diagnostic.line) || [];
+    lineDiagnostics.push(diagnostic);
+    diagnosticsByLine.set(diagnostic.line, lineDiagnostics);
+  }
+
+  lineNumbers.forEach((lineNumber, index) => {
+    const lineDiagnostics = diagnosticsByLine.get(index + 1) || [];
+    const hasError = lineDiagnostics.some(
+      (diagnostic) => diagnostic.severity === "error",
+    );
+    lineNumber.classList.toggle("has-error", hasError);
+    lineNumber.classList.toggle(
+      "has-warning",
+      !hasError && lineDiagnostics.length > 0,
+    );
+    lineNumber.title = lineDiagnostics
+      .map((diagnostic) => diagnostic.message)
+      .join("\n");
+  });
+}
+
+function setDiagnosticsPanel(open) {
+  const shouldOpen = open && currentDiagnostics.length > 0;
+  diagnosticsPanel.hidden = !shouldOpen;
+  editorPane.classList.toggle("has-diagnostics", shouldOpen);
+  formatStatus.setAttribute("aria-expanded", String(shouldOpen));
+}
+
+function getDiagnosticSummary(diagnostics) {
+  const errorCount = diagnostics.filter(
+    (diagnostic) => diagnostic.severity === "error",
+  ).length;
+  const warningCount = diagnostics.length - errorCount;
+
+  if (!diagnostics.length) {
+    return { errorCount, warningCount, text: "格式正常" };
+  }
+
+  const parts = [];
+  if (errorCount) parts.push(`${errorCount} 个错误`);
+  if (warningCount) parts.push(`${warningCount} 个警告`);
+  return { errorCount, warningCount, text: parts.join("，") };
+}
+
+function updateDiagnostics(value) {
+  currentDiagnostics = lintMarkdown(value, {
+    isKnownLanguage: (language) => Boolean(hljs.getLanguage(language)),
+  });
+
+  const { errorCount, warningCount, text } =
+    getDiagnosticSummary(currentDiagnostics);
+  formatSummary.textContent = text;
+  diagnosticsSummary.textContent = text;
+  formatStatus.classList.toggle("has-error", errorCount > 0);
+  formatStatus.classList.toggle(
+    "has-warning",
+    errorCount === 0 && warningCount > 0,
+  );
+
+  const fragment = document.createDocumentFragment();
+  currentDiagnostics.forEach((diagnostic) => {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    const location = document.createElement("span");
+    const message = document.createElement("span");
+
+    button.type = "button";
+    button.className = `diagnostic-item is-${diagnostic.severity}`;
+    button.dataset.line = String(diagnostic.line);
+    button.dataset.column = String(diagnostic.column);
+    location.className = "diagnostic-location";
+    location.textContent = `Ln ${diagnostic.line}:${diagnostic.column}`;
+    message.className = "diagnostic-message";
+    message.textContent = diagnostic.message;
+    button.append(location, message);
+    item.append(button);
+    fragment.append(item);
+  });
+  diagnosticsList.replaceChildren(fragment);
+  updateLineNumberDiagnostics();
+
+  if (!currentDiagnostics.length) setDiagnosticsPanel(false);
+}
+
+function jumpToDiagnostic(line, column) {
+  const lines = editor.value.split("\n");
+  const safeLine = Math.min(Math.max(1, line), lines.length);
+  const lineStart = lines
+    .slice(0, safeLine - 1)
+    .reduce((length, value) => length + value.length + 1, 0);
+  const offset = Math.min(
+    lineStart + Math.max(0, column - 1),
+    lineStart + lines[safeLine - 1].length,
+  );
+  const lineHeight = Number.parseFloat(getComputedStyle(editor).lineHeight);
+
+  editor.focus();
+  editor.setSelectionRange(offset, Math.min(offset + 1, editor.value.length));
+  editor.scrollTop = Math.max(0, (safeLine - 1) * lineHeight - 80);
+  syncLineNumbers();
+  updateCursorPosition();
 }
 
 function updateDocumentStats(value) {
@@ -1080,6 +1198,25 @@ editor.addEventListener("input", () => {
   render();
   updateCursorPosition();
   queueSave();
+});
+
+formatStatus.addEventListener("click", () => {
+  if (!currentDiagnostics.length) {
+    showToast("没有发现格式问题");
+    return;
+  }
+
+  setDiagnosticsPanel(diagnosticsPanel.hidden);
+});
+
+diagnosticsClose.addEventListener("click", () => {
+  setDiagnosticsPanel(false);
+});
+
+diagnosticsList.addEventListener("click", (event) => {
+  const item = event.target.closest("button[data-line]");
+  if (!item) return;
+  jumpToDiagnostic(Number(item.dataset.line), Number(item.dataset.column));
 });
 
 ["click", "keyup", "select"].forEach((eventName) => {

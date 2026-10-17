@@ -9,6 +9,8 @@
   --line: #d9d3c7;
   --line-strong: #beb7aa;
   --success: #3d7a50;
+  --error: #b33b32;
+  --warning: #b87516;
   --code-bg: #1f211f;
   --code-ink: #f2efe7;
   --focus: #2b6040;
@@ -43,6 +45,8 @@
   --line: #383a34;
   --line-strong: #50534a;
   --success: #6eb27f;
+  --error: #ef776d;
+  --warning: #e5aa55;
   --code-bg: #111210;
   --code-ink: #f5f1e8;
   --focus: #8ac09a;
@@ -479,6 +483,16 @@ button {
   height: 2.1233333333em;
 }
 
+.line-numbers-inner span.has-error {
+  color: var(--error);
+  font-weight: 700;
+}
+
+.line-numbers-inner span.has-warning {
+  color: var(--warning);
+  font-weight: 700;
+}
+
 #editor {
   width: 100%;
   height: 100%;
@@ -731,6 +745,145 @@ button {
   letter-spacing: 0.02em;
 }
 
+.editor-pane.has-diagnostics {
+  grid-template-rows:
+    52px minmax(0, 1fr) clamp(112px, 22vh, 180px)
+    var(--status-height);
+}
+
+.diagnostics-panel {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper-deep) 45%, var(--paper));
+}
+
+.diagnostics-panel[hidden] {
+  display: none;
+}
+
+.diagnostics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 0 12px 0 14px;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.diagnostics-header strong {
+  margin-right: 8px;
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.diagnostics-header button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--ink-soft);
+  background: transparent;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.diagnostics-header button:hover {
+  color: var(--ink);
+  background: var(--paper-deep);
+}
+
+.diagnostics-list {
+  max-height: calc(100% - 36px);
+  margin: 0;
+  padding: 0 8px 8px;
+  overflow: auto;
+  list-style: none;
+}
+
+.diagnostic-item {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--ink-soft);
+  background: transparent;
+  cursor: pointer;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.diagnostic-item:hover {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.diagnostic-location {
+  color: var(--warning);
+  font-weight: 700;
+}
+
+.diagnostic-item.is-error .diagnostic-location {
+  color: var(--error);
+}
+
+.diagnostic-message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.format-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.format-status:hover {
+  color: var(--ink-soft);
+  background: var(--paper-deep);
+}
+
+.format-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.format-status.has-error {
+  color: var(--error);
+}
+
+.format-status.has-error .format-status-dot {
+  background: var(--error);
+}
+
+.format-status.has-warning {
+  color: var(--warning);
+}
+
+.format-status.has-warning .format-status-dot {
+  background: var(--warning);
+}
+
 .status-spacer {
   flex: 1;
 }
@@ -888,6 +1041,10 @@ button {
 
   .pane {
     grid-template-rows: 46px minmax(0, 1fr) var(--status-height);
+  }
+
+  .editor-pane.has-diagnostics {
+    grid-template-rows: 46px minmax(0, 1fr) 120px var(--status-height);
   }
 
   .pane-header {
