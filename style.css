@@ -603,6 +603,29 @@ button {
   overflow: hidden;
 }
 
+.line-measurer {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: var(--editor-padding-block-start) var(--editor-padding-inline)
+    var(--editor-padding-block-end);
+  visibility: hidden;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.82;
+  overflow-wrap: break-word;
+  tab-size: 2;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.line-measure {
+  display: block;
+  min-height: 1.82em;
+}
+
 .editor-diagnostics-overlay {
   position: absolute;
   z-index: 1;

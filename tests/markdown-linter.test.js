@@ -106,3 +106,11 @@ test("reports heading skips and malformed table separators", () => {
   assert.ok(codes.includes("invalid-table-separator"));
   assert.ok(codes.includes("table-column-count"));
 });
+
+test("reports excessive blank lines and full-width task checkboxes", () => {
+  const diagnostics = lint("-【】错误任务项\n\n\n\n下一段");
+  const codes = diagnostics.map((item) => item.code);
+
+  assert.ok(codes.includes("fullwidth-task-checkbox"));
+  assert.ok(codes.includes("too-many-blank-lines"));
+});

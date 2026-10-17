@@ -387,6 +387,22 @@ function lintFullWidthMarkdownSyntax(
 }
 
 function lintListSyntax(line, lineNumber, diagnostics, columnOffset) {
+  const fullWidthTask =
+    /^ {0,3}([-+*]|\d{1,9}[.)])\s*[【［][^】］\n]*[】］]/.exec(line);
+  if (fullWidthTask) {
+    diagnostics.push(
+      createDiagnostic(
+        lineNumber,
+        fullWidthTask.index + columnOffset + 1,
+        "error",
+        "fullwidth-task-checkbox",
+        "任务列表应使用半角 [ ]，不要使用中文【】或全角［］",
+        fullWidthTask[0].length,
+      ),
+    );
+    return;
+  }
+
   const task = /^ {0,3}([-+*]|\d{1,9}[.)])(\s*)\[([^\]\n]*)(\])?/.exec(line);
   if (task) {
     const marker = task[1];
@@ -460,6 +476,30 @@ function lintListSyntax(line, lineNumber, diagnostics, columnOffset) {
       ),
     );
   }
+}
+
+function lintBlankLines(lines, fencedLines, diagnostics) {
+  let consecutiveBlankLines = 0;
+
+  lines.forEach((line, index) => {
+    const lineNumber = index + 1;
+    if (fencedLines.has(lineNumber) || line.trim()) {
+      consecutiveBlankLines = 0;
+      return;
+    }
+
+    consecutiveBlankLines += 1;
+    if (consecutiveBlankLines <= 2) return;
+    diagnostics.push(
+      createDiagnostic(
+        lineNumber,
+        1,
+        "warning",
+        "too-many-blank-lines",
+        "连续空行过多，最多保留 2 行",
+      ),
+    );
+  });
 }
 
 function lintHeadingStructure(lines, fencedLines, diagnostics) {
@@ -714,6 +754,7 @@ export function lintMarkdown(source, options = {}) {
   lintMarkdownSyntax(lines, fencedLines, diagnostics);
   lintHeadingStructure(lines, fencedLines, diagnostics);
   lintTables(lines, fencedLines, diagnostics);
+  lintBlankLines(lines, fencedLines, diagnostics);
 
   return diagnostics
     .filter(

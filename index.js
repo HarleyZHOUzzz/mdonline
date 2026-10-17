@@ -290,6 +290,7 @@ const translations = {
 
 const editor = document.querySelector("#editor");
 const lineNumbersInner = document.querySelector("#line-numbers-inner");
+const lineMeasurer = document.querySelector("#line-measurer");
 const editorPane = document.querySelector(".editor-pane");
 const diagnosticsOverlay = document.querySelector(
   "#editor-diagnostics-overlay",
@@ -324,7 +325,6 @@ let saveTimer;
 let toastTimer;
 let dragging = false;
 let syncingScroll = false;
-let renderedLineCount = 0;
 let currentDiagnostics = [];
 let currentLanguage = "zh-CN";
 
@@ -404,11 +404,14 @@ function localizeDiagnostic(diagnostic) {
     "fullwidth-formula-delimiter": "Use half-width $ for formulas",
     "fullwidth-table-pipe": "Use half-width | as the table column separator",
     "fullwidth-emphasis-marker": "Use half-width * for emphasis",
+    "fullwidth-task-checkbox":
+      "Use half-width [ ] for task lists instead of 【】 or ［］",
     "task-list-spacing": "Task-list markers must be followed by a space",
     "unclosed-task-checkbox": "Task-list checkbox is missing a closing ]",
     "invalid-task-state": "Task state must be a space, x, or X",
     "list-marker-spacing": "Add a space after the bullet-list marker",
     "ordered-list-marker-spacing": "Add a space after the ordered-list marker",
+    "too-many-blank-lines": "Too many consecutive blank lines; keep at most 2",
     "invalid-table-separator":
       "Each table separator cell needs at least 3 - characters; : sets alignment",
     "table-column-count":
@@ -468,20 +471,31 @@ function render() {
 }
 
 function updateLineNumbers() {
-  const lineCount = editor.value.split("\n").length;
-  if (lineCount === renderedLineCount) return;
+  const lines = editor.value.split("\n");
+  const measureFragment = document.createDocumentFragment();
+
+  lines.forEach((line) => {
+    const measure = document.createElement("span");
+    measure.className = "line-measure";
+    measure.textContent = line || "\u200b";
+    measureFragment.append(measure);
+  });
+  lineMeasurer.replaceChildren(measureFragment);
 
   const fragment = document.createDocumentFragment();
 
-  for (let index = 1; index <= lineCount; index += 1) {
+  [...lineMeasurer.children].forEach((measure, index) => {
     const lineNumber = document.createElement("span");
-    lineNumber.textContent = String(index);
+    lineNumber.textContent = String(index + 1);
+    lineNumber.style.height = `${Math.max(
+      Number.parseFloat(getComputedStyle(editor).lineHeight),
+      measure.getBoundingClientRect().height,
+    )}px`;
     fragment.append(lineNumber);
-  }
+  });
 
   lineNumbersInner.replaceChildren(fragment);
   syncLineNumbers();
-  renderedLineCount = lineCount;
 }
 
 function syncLineNumbers() {
@@ -1756,7 +1770,10 @@ workspace.addEventListener("transitionend", (event) => {
   if (event.propertyName === "grid-template-columns") syncDiagnosticOverlay();
 });
 
-const editorResizeObserver = new ResizeObserver(syncDiagnosticOverlay);
+const editorResizeObserver = new ResizeObserver(() => {
+  updateLineNumbers();
+  syncDiagnosticOverlay();
+});
 editorResizeObserver.observe(editor);
 
 const storedTheme = localStorage.getItem(storageKeys.theme);
