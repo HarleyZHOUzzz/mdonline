@@ -322,7 +322,7 @@ const languageButtons = [...document.querySelectorAll("[data-language]")];
 
 let saveTimer;
 let toastTimer;
-let lineNumberResizeTimer;
+let lineNumberResizeFrame;
 let languageAnimationTimer;
 let dragging = false;
 let syncingScroll = false;
@@ -558,8 +558,11 @@ function updateLineNumbers() {
 }
 
 function scheduleLineNumberUpdate() {
-  window.clearTimeout(lineNumberResizeTimer);
-  lineNumberResizeTimer = window.setTimeout(updateLineNumbers, 120);
+  window.cancelAnimationFrame(lineNumberResizeFrame);
+  lineNumberResizeFrame = window.requestAnimationFrame(() => {
+    updateLineNumbers();
+    lineNumberResizeFrame = undefined;
+  });
 }
 
 function syncLineNumbers() {
