@@ -338,18 +338,12 @@ button {
   white-space: nowrap;
 }
 
-.save-dot,
 .live-label > span:first-child {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--success);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 13%, transparent);
-}
-
-.save-state.is-saving .save-dot {
-  background: var(--ink-faint);
-  animation: pulse 900ms ease infinite;
 }
 
 .workspace {
@@ -761,12 +755,6 @@ button {
   color: var(--ink-faint);
   font-size: 11px;
   letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.live-label span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -1197,12 +1185,6 @@ button {
 
 .diagnostic-hover-card[hidden] {
   display: none;
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.38;
-  }
 }
 
 @media (max-width: 1050px) {
