@@ -110,6 +110,15 @@ button {
   color: inherit;
 }
 
+.has-reserved-i18n-width {
+  min-width: var(--localized-width);
+  text-align: center;
+}
+
+.has-reserved-i18n-width:not(button) {
+  display: inline-block;
+}
+
 .app-shell {
   position: relative;
   z-index: 1;
@@ -1243,6 +1252,10 @@ button {
   .brand-divider,
   .brand-product,
   .new-document span {
+    display: none;
+  }
+
+  .new-document span.has-reserved-i18n-width {
     display: none;
   }
 

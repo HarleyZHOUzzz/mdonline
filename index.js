@@ -386,6 +386,50 @@ function t(key) {
   );
 }
 
+function reserveLocalizedWidths() {
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    const key = element.dataset.i18n;
+    const values = Object.values(translations)
+      .map((language) => language[key])
+      .filter(Boolean);
+    if (!values.length) return;
+
+    const computedStyle = getComputedStyle(element);
+    const measure = document.createElement("span");
+    measure.style.position = "fixed";
+    measure.style.visibility = "hidden";
+    measure.style.width = "max-content";
+    measure.style.whiteSpace = "nowrap";
+    measure.style.font = computedStyle.font;
+    measure.style.letterSpacing = computedStyle.letterSpacing;
+    measure.style.textTransform = computedStyle.textTransform;
+    document.body.append(measure);
+
+    const textWidth = Math.max(
+      ...values.map((value) => {
+        measure.textContent = value;
+        return measure.getBoundingClientRect().width;
+      }),
+    );
+    measure.remove();
+
+    const isButton = element.matches("button");
+    const horizontalChrome = isButton
+      ? Number.parseFloat(computedStyle.paddingLeft) +
+        Number.parseFloat(computedStyle.paddingRight) +
+        Number.parseFloat(computedStyle.borderLeftWidth) +
+        Number.parseFloat(computedStyle.borderRightWidth)
+      : 0;
+    const width = Math.max(
+      element.getBoundingClientRect().width,
+      textWidth + horizontalChrome,
+    );
+
+    element.style.setProperty("--localized-width", `${Math.ceil(width)}px`);
+    element.classList.add("has-reserved-i18n-width");
+  });
+}
+
 function localizeDiagnostic(diagnostic) {
   if (currentLanguage === "zh-CN") return diagnostic.message;
 
@@ -1854,6 +1898,8 @@ editor.value = localStorage.getItem(storageKeys.content) || starterDocument;
 setMode(localStorage.getItem(storageKeys.mode) || "split");
 applyLanguage(storedLanguage || "zh-CN");
 applyTheme(storedTheme || preferredTheme);
+reserveLocalizedWidths();
+document.fonts?.ready.then(reserveLocalizedWidths);
 resolveGithubRepository();
 render();
 updateCursorPosition();
