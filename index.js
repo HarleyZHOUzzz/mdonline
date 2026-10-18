@@ -517,7 +517,7 @@ function applyLanguage(language, animate = false) {
     window.clearTimeout(languageAnimationTimer);
     languageAnimationTimer = window.setTimeout(() => {
       document.documentElement.classList.remove("is-switching-language");
-    }, 220);
+    }, 340);
   }
 }
 

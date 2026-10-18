@@ -145,7 +145,7 @@ button {
 }
 
 :root.is-switching-language [data-i18n] {
-  animation: localized-label-change 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: localized-label-change 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .app-shell {
