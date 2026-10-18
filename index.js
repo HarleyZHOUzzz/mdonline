@@ -557,6 +557,11 @@ function updateLineNumbers() {
   syncLineNumbers();
 }
 
+function scheduleLineNumberUpdate() {
+  window.clearTimeout(lineNumberResizeTimer);
+  lineNumberResizeTimer = window.setTimeout(updateLineNumbers, 120);
+}
+
 function syncLineNumbers() {
   lineNumbersInner.style.transform = `translate3d(0, ${-editor.scrollTop}px, 0)`;
   syncDiagnosticOverlay();
@@ -1831,7 +1836,10 @@ document.querySelectorAll("[data-tooltip]").forEach((button) => {
 window.addEventListener("resize", () => {
   hideButtonTooltip();
   if (!moreMenu.hidden) positionMoreMenu();
+  scheduleLineNumberUpdate();
 });
+
+window.visualViewport?.addEventListener("resize", scheduleLineNumberUpdate);
 
 document.querySelector("#copy-markdown").addEventListener("click", async () => {
   await navigator.clipboard.writeText(editor.value);
@@ -1936,8 +1944,7 @@ workspace.addEventListener("transitionend", (event) => {
 
 const editorResizeObserver = new ResizeObserver(() => {
   syncDiagnosticOverlay();
-  window.clearTimeout(lineNumberResizeTimer);
-  lineNumberResizeTimer = window.setTimeout(updateLineNumbers, 120);
+  scheduleLineNumberUpdate();
 });
 editorResizeObserver.observe(editor);
 
