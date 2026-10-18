@@ -533,6 +533,9 @@ function updateLineNumbers() {
   const lines = editor.value.split("\n");
   const measureFragment = document.createDocumentFragment();
 
+  // Match the textarea's usable width exactly, including space lost to its scrollbar.
+  lineMeasurer.style.width = `${editor.clientWidth}px`;
+
   lines.forEach((line) => {
     const measure = document.createElement("span");
     measure.className = "line-measure";
