@@ -322,10 +322,12 @@ const languageButtons = [...document.querySelectorAll("[data-language]")];
 
 let saveTimer;
 let toastTimer;
+let lineNumberResizeTimer;
 let dragging = false;
 let syncingScroll = false;
 let currentDiagnostics = [];
 let currentLanguage = "zh-CN";
+let activePreviewSnapThreshold = 18;
 
 const paneSnapThreshold = 18;
 
@@ -1610,6 +1612,7 @@ function setMode(mode) {
     ? mode
     : "split";
   workspace.dataset.mode = validMode;
+  editorPane.classList.toggle("is-title-collapsed", validMode === "preview");
   modeButtons.forEach((button) => {
     const active = button.dataset.mode === validMode;
     button.classList.toggle("is-active", active);
@@ -1823,6 +1826,16 @@ document.querySelector("#download-markdown").addEventListener("click", () => {
 
 resizer.addEventListener("pointerdown", (event) => {
   if (workspace.dataset.mode !== "split") return;
+  const workspaceBounds = workspace.getBoundingClientRect();
+  const moreButtonRight = moreButton.getBoundingClientRect().right;
+  activePreviewSnapThreshold = Math.min(
+    82,
+    Math.max(
+      12,
+      ((moreButtonRight - workspaceBounds.left + 8) / workspaceBounds.width) *
+        100,
+    ),
+  );
   dragging = true;
   resizer.setPointerCapture(event.pointerId);
   workspace.classList.add("is-dragging");
@@ -1834,7 +1847,7 @@ resizer.addEventListener("pointermove", (event) => {
   const bounds = workspace.getBoundingClientRect();
   const percentage = ((event.clientX - bounds.left) / bounds.width) * 100;
   const targetMode =
-    percentage <= paneSnapThreshold
+    percentage <= activePreviewSnapThreshold
       ? "preview"
       : percentage >= 100 - paneSnapThreshold
         ? "edit"
@@ -1844,16 +1857,23 @@ resizer.addEventListener("pointermove", (event) => {
   if (modeChanged) {
     workspace.classList.add("is-snapping");
     if (targetMode === "preview") {
-      workspace.style.setProperty("--editor-width", `${paneSnapThreshold}%`);
+      workspace.style.setProperty(
+        "--editor-width",
+        `${activePreviewSnapThreshold}%`,
+      );
     } else if (targetMode === "edit") {
       workspace.style.setProperty(
         "--editor-width",
         `${100 - paneSnapThreshold}%`,
       );
     }
-    void workspace.offsetWidth;
     setMode(targetMode);
   }
+
+  editorPane.classList.toggle(
+    "is-title-collapsed",
+    targetMode === "preview" || percentage <= activePreviewSnapThreshold + 5,
+  );
 
   if (targetMode === "split") {
     workspace.style.setProperty(
@@ -1868,21 +1888,31 @@ resizer.addEventListener("pointerup", (event) => {
   resizer.releasePointerCapture(event.pointerId);
   workspace.classList.remove("is-dragging", "is-snapping");
   document.body.classList.remove("is-resizing");
+  if (workspace.dataset.mode === "split") {
+    editorPane.classList.remove("is-title-collapsed");
+  }
+  updateLineNumbers();
 });
 
 resizer.addEventListener("lostpointercapture", () => {
   dragging = false;
   workspace.classList.remove("is-dragging", "is-snapping");
   document.body.classList.remove("is-resizing");
+  if (workspace.dataset.mode === "split") {
+    editorPane.classList.remove("is-title-collapsed");
+  }
 });
 
 workspace.addEventListener("transitionend", (event) => {
-  if (event.propertyName === "grid-template-columns") syncDiagnosticOverlay();
+  if (event.propertyName !== "grid-template-columns") return;
+  syncDiagnosticOverlay();
+  updateLineNumbers();
 });
 
 const editorResizeObserver = new ResizeObserver(() => {
-  updateLineNumbers();
   syncDiagnosticOverlay();
+  window.clearTimeout(lineNumberResizeTimer);
+  lineNumberResizeTimer = window.setTimeout(updateLineNumbers, 120);
 });
 editorResizeObserver.observe(editor);
 
