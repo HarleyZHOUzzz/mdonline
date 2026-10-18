@@ -740,15 +740,31 @@ function hideDiagnosticHover() {
   diagnosticHoverCard.setAttribute("aria-hidden", "true");
 }
 
+function getSourceLineAtViewportY(viewportY) {
+  const sourceLines = lineNumbersInner.children;
+  let start = 0;
+  let end = sourceLines.length - 1;
+
+  while (start <= end) {
+    const middle = Math.floor((start + end) / 2);
+    const bounds = sourceLines[middle].getBoundingClientRect();
+
+    if (viewportY < bounds.top) {
+      end = middle - 1;
+    } else if (viewportY >= bounds.bottom) {
+      start = middle + 1;
+    } else {
+      return middle + 1;
+    }
+  }
+
+  return undefined;
+}
+
 function updateDiagnosticHover(event) {
   if (!currentDiagnostics.length) return hideDiagnosticHover();
 
-  const editorBounds = editor.getBoundingClientRect();
-  const style = getComputedStyle(editor);
-  const lineHeight = Number.parseFloat(style.lineHeight);
-  const paddingTop = Number.parseFloat(style.paddingTop);
-  const relativeY = event.clientY - editorBounds.top + editor.scrollTop;
-  const line = Math.floor((relativeY - paddingTop) / lineHeight) + 1;
+  const line = getSourceLineAtViewportY(event.clientY);
   const diagnostics = currentDiagnostics.filter(
     (diagnostic) => diagnostic.line === line,
   );
