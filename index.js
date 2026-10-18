@@ -312,6 +312,7 @@ const moreButton = document.querySelector("#more-button");
 const moreMenu = document.querySelector("#more-menu");
 const githubLink = document.querySelector("#github-link");
 const toast = document.querySelector("#toast");
+const buttonTooltip = document.querySelector("#button-tooltip");
 const diagnosticHoverCard = document.querySelector("#diagnostic-hover-card");
 const diagnosticsPanel = document.querySelector("#diagnostics-panel");
 const diagnosticsSummary = document.querySelector("#diagnostics-summary");
@@ -329,6 +330,8 @@ let currentDiagnostics = [];
 let currentLanguage = "zh-CN";
 
 const paneSnapThreshold = 18;
+
+document.body.append(moreMenu);
 
 const md = new MarkdownIt({
   breaks: true,
@@ -1509,6 +1512,57 @@ function showToast(message) {
   );
 }
 
+function hideButtonTooltip() {
+  buttonTooltip.hidden = true;
+  buttonTooltip.setAttribute("aria-hidden", "true");
+}
+
+function showButtonTooltip(button) {
+  const label = button.dataset.tooltip;
+  if (!label) return hideButtonTooltip();
+
+  buttonTooltip.textContent = label;
+  buttonTooltip.hidden = false;
+  buttonTooltip.setAttribute("aria-hidden", "false");
+
+  const bounds = button.getBoundingClientRect();
+  const margin = 12;
+  const tooltipWidth = buttonTooltip.offsetWidth;
+  const tooltipHeight = buttonTooltip.offsetHeight;
+  const maxLeft = window.innerWidth - tooltipWidth - margin;
+  const maxTop = window.innerHeight - tooltipHeight - margin;
+  const left = Math.max(
+    margin,
+    Math.min(bounds.left + bounds.width / 2 - tooltipWidth / 2, maxLeft),
+  );
+  const preferredTop = bounds.bottom + 8;
+  const top =
+    preferredTop <= maxTop
+      ? preferredTop
+      : Math.max(margin, bounds.top - tooltipHeight - 8);
+
+  buttonTooltip.style.left = `${left}px`;
+  buttonTooltip.style.top = `${top}px`;
+}
+
+function positionMoreMenu() {
+  const bounds = moreButton.getBoundingClientRect();
+  const margin = 12;
+  const menuWidth = moreMenu.offsetWidth;
+  const menuHeight = moreMenu.offsetHeight;
+  const maxLeft = window.innerWidth - menuWidth - margin;
+  const maxTop = window.innerHeight - menuHeight - margin;
+  const left = Math.max(margin, Math.min(bounds.right - menuWidth, maxLeft));
+  const preferredTop = bounds.bottom + 8;
+  const top =
+    preferredTop <= maxTop
+      ? preferredTop
+      : Math.max(margin, bounds.top - menuHeight - 8);
+
+  moreMenu.style.left = `${left}px`;
+  moreMenu.style.top = `${top}px`;
+}
+
 function setMode(mode) {
   const validMode = ["split", "edit", "preview"].includes(mode)
     ? mode
@@ -1686,11 +1740,25 @@ moreButton.addEventListener("click", (event) => {
   const isOpen = !moreMenu.hidden;
   moreMenu.hidden = isOpen;
   moreButton.setAttribute("aria-expanded", String(!isOpen));
+  hideButtonTooltip();
+  if (!isOpen) positionMoreMenu();
 });
 
 document.addEventListener("click", () => {
   moreMenu.hidden = true;
   moreButton.setAttribute("aria-expanded", "false");
+});
+
+document.querySelectorAll("[data-tooltip]").forEach((button) => {
+  button.addEventListener("pointerenter", () => showButtonTooltip(button));
+  button.addEventListener("pointerleave", hideButtonTooltip);
+  button.addEventListener("focus", () => showButtonTooltip(button));
+  button.addEventListener("blur", hideButtonTooltip);
+});
+
+window.addEventListener("resize", () => {
+  hideButtonTooltip();
+  if (!moreMenu.hidden) positionMoreMenu();
 });
 
 document.querySelector("#copy-markdown").addEventListener("click", async () => {

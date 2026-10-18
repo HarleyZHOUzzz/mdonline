@@ -455,43 +455,14 @@ button {
   background: var(--line);
 }
 
-[data-tooltip]::after {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 8px);
-  left: 50%;
-  width: max-content;
-  max-width: 180px;
-  padding: 5px 8px;
-  border-radius: var(--radius-small);
-  color: var(--paper);
-  background: var(--ink);
-  content: attr(data-tooltip);
-  font-size: 11px;
-  pointer-events: none;
-  opacity: 0;
-  transform: translate(-50%, -3px);
-  transition:
-    opacity 120ms ease,
-    transform 120ms ease;
-}
-
-[data-tooltip]:hover::after,
-[data-tooltip]:focus-visible::after {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
 .more-actions {
   position: relative;
   z-index: 12;
 }
 
 .more-menu {
-  position: absolute;
-  z-index: 12;
-  top: calc(100% + 8px);
-  right: 0;
+  position: fixed;
+  z-index: 50;
   width: 174px;
   padding: 6px;
   border: 1px solid var(--line);
@@ -1177,6 +1148,25 @@ button {
 .toast.is-visible {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+.button-tooltip {
+  position: fixed;
+  z-index: 60;
+  max-width: min(220px, calc(100vw - 24px));
+  padding: 5px 8px;
+  border-radius: var(--radius-small);
+  color: var(--paper);
+  background: var(--ink);
+  box-shadow: 0 8px 18px rgba(20, 20, 18, 0.16);
+  font-size: 11px;
+  line-height: 1.35;
+  pointer-events: none;
+  text-align: center;
+}
+
+.button-tooltip[hidden] {
+  display: none;
 }
 
 .diagnostic-hover-card {
