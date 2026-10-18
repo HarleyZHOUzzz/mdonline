@@ -328,6 +328,7 @@ let syncingScroll = false;
 let currentDiagnostics = [];
 let currentLanguage = "zh-CN";
 let activePreviewSnapThreshold = 18;
+let splitEditorWidth = "50%";
 
 const paneSnapThreshold = 18;
 
@@ -1607,10 +1608,25 @@ function positionMoreMenu() {
   moreMenu.style.top = `${top}px`;
 }
 
-function setMode(mode) {
+function setMode(mode, options = {}) {
   const validMode = ["split", "edit", "preview"].includes(mode)
     ? mode
     : "split";
+
+  if (validMode === "split") {
+    const nextWidth = options.editorWidth || splitEditorWidth;
+    splitEditorWidth = nextWidth;
+    workspace.style.setProperty("--editor-width", nextWidth);
+    workspace.style.setProperty("--resizer-width", "8px");
+  } else {
+    if (options.editorWidth) splitEditorWidth = options.editorWidth;
+    workspace.style.setProperty(
+      "--editor-width",
+      validMode === "edit" ? "100%" : "0%",
+    );
+    workspace.style.setProperty("--resizer-width", "0px");
+  }
+
   workspace.dataset.mode = validMode;
   editorPane.classList.toggle("is-title-collapsed", validMode === "preview");
   modeButtons.forEach((button) => {
@@ -1827,14 +1843,19 @@ document.querySelector("#download-markdown").addEventListener("click", () => {
 resizer.addEventListener("pointerdown", (event) => {
   if (workspace.dataset.mode !== "split") return;
   const workspaceBounds = workspace.getBoundingClientRect();
-  const moreButtonRight = moreButton.getBoundingClientRect().right;
+  const editorHeader = editorPane.querySelector(".pane-header");
+  const editorTitle = editorPane.querySelector(".pane-title");
+  const toolbar = editorPane.querySelector(".toolbar");
+  const headerStyle = getComputedStyle(editorHeader);
+  const requiredWidth =
+    editorTitle.getBoundingClientRect().width +
+    toolbar.getBoundingClientRect().width +
+    Number.parseFloat(headerStyle.paddingLeft) +
+    Number.parseFloat(headerStyle.paddingRight) +
+    Number.parseFloat(headerStyle.gap);
   activePreviewSnapThreshold = Math.min(
     82,
-    Math.max(
-      12,
-      ((moreButtonRight - workspaceBounds.left + 8) / workspaceBounds.width) *
-        100,
-    ),
+    Math.max(12, (requiredWidth / workspaceBounds.width) * 100),
   );
   dragging = true;
   resizer.setPointerCapture(event.pointerId);
@@ -1857,17 +1878,11 @@ resizer.addEventListener("pointermove", (event) => {
   if (modeChanged) {
     workspace.classList.add("is-snapping");
     if (targetMode === "preview") {
-      workspace.style.setProperty(
-        "--editor-width",
-        `${activePreviewSnapThreshold}%`,
-      );
+      splitEditorWidth = `${activePreviewSnapThreshold}%`;
     } else if (targetMode === "edit") {
-      workspace.style.setProperty(
-        "--editor-width",
-        `${100 - paneSnapThreshold}%`,
-      );
+      splitEditorWidth = `${100 - paneSnapThreshold}%`;
     }
-    setMode(targetMode);
+    setMode(targetMode, { editorWidth: splitEditorWidth });
   }
 
   editorPane.classList.toggle(
@@ -1876,10 +1891,9 @@ resizer.addEventListener("pointermove", (event) => {
   );
 
   if (targetMode === "split") {
-    workspace.style.setProperty(
-      "--editor-width",
-      `${Math.min(82, Math.max(18, percentage))}%`,
-    );
+    splitEditorWidth = `${Math.min(82, Math.max(18, percentage))}%`;
+    workspace.style.setProperty("--editor-width", splitEditorWidth);
+    workspace.style.setProperty("--resizer-width", "8px");
   }
 });
 
@@ -1904,7 +1918,7 @@ resizer.addEventListener("lostpointercapture", () => {
 });
 
 workspace.addEventListener("transitionend", (event) => {
-  if (event.propertyName !== "grid-template-columns") return;
+  if (event.propertyName !== "--editor-width") return;
   syncDiagnosticOverlay();
   updateLineNumbers();
 });
