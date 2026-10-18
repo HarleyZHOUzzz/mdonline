@@ -323,6 +323,7 @@ const languageButtons = [...document.querySelectorAll("[data-language]")];
 let saveTimer;
 let toastTimer;
 let lineNumberResizeTimer;
+let languageAnimationTimer;
 let dragging = false;
 let syncingScroll = false;
 let currentDiagnostics = [];
@@ -485,7 +486,7 @@ function localizeDiagnostic(diagnostic) {
   return messages[diagnostic.code] || diagnostic.message;
 }
 
-function applyLanguage(language) {
+function applyLanguage(language, animate = false) {
   currentLanguage = translations[language] ? language : "zh-CN";
   document.documentElement.lang = currentLanguage;
   document.title = t("pageTitle");
@@ -508,6 +509,16 @@ function applyLanguage(language) {
   updateCursorPosition();
   updateDiagnostics(editor.value);
   localStorage.setItem(storageKeys.language, currentLanguage);
+
+  if (animate) {
+    document.documentElement.classList.remove("is-switching-language");
+    void document.documentElement.offsetWidth;
+    document.documentElement.classList.add("is-switching-language");
+    window.clearTimeout(languageAnimationTimer);
+    languageAnimationTimer = window.setTimeout(() => {
+      document.documentElement.classList.remove("is-switching-language");
+    }, 220);
+  }
 }
 
 function render() {
@@ -1775,7 +1786,7 @@ modeButtons.forEach((button) => {
 
 languageButtons.forEach((button) => {
   button.addEventListener("click", () =>
-    applyLanguage(button.dataset.language),
+    applyLanguage(button.dataset.language, true),
   );
 });
 
