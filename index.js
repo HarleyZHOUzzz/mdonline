@@ -1687,14 +1687,8 @@ function applyTheme(theme) {
   createIcons({ icons: appIcons });
 }
 
-function resolveGithubRepository() {
-  const hostParts = window.location.hostname.split(".");
-  const pathParts = window.location.pathname.split("/").filter(Boolean);
-
-  if (hostParts[1] === "github" && hostParts[2] === "io") {
-    const repository = pathParts[0] || `${hostParts[0]}.github.io`;
-    githubLink.href = `https://github.com/${hostParts[0]}/${repository}`;
-  }
+function setGithubRepositoryLink() {
+  githubLink.href = "https://github.com/HarleyZHOUzzz/mdonline";
 }
 
 document.querySelector("#toolbar").addEventListener("click", (event) => {
@@ -1982,7 +1976,7 @@ applyLanguage(storedLanguage || "zh-CN");
 applyTheme(storedTheme || preferredTheme);
 reserveLocalizedWidths();
 document.fonts?.ready.then(reserveLocalizedWidths);
-resolveGithubRepository();
+setGithubRepositoryLink();
 render();
 updateCursorPosition();
 createIcons({ icons: appIcons });
